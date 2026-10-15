@@ -13,9 +13,11 @@ function App() {
       <TopBar
         method={lab.draft.method}
         url={lab.draft.url}
+        timeoutMs={lab.draft.timeoutMs}
         sending={lab.sendState === 'loading'}
         onMethodChange={lab.setMethod}
         onUrlChange={lab.setUrl}
+        onTimeoutChange={lab.setTimeoutMs}
         onSend={lab.send}
         onSaveCurrent={lab.saveCurrent}
       />
@@ -37,9 +39,11 @@ function App() {
         <div className={styles.main}>
           <RequestComposer
             method={lab.draft.method}
+            url={lab.draft.url}
             params={lab.draft.params}
             headers={lab.draft.headers}
             body={lab.draft.body ?? ''}
+            timeoutMs={lab.draft.timeoutMs}
             activeTab={lab.reqTab}
             onTabChange={lab.setReqTab}
             onParamsChange={lab.setParams}

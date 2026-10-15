@@ -9,14 +9,26 @@ const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE']
 interface TopBarProps {
   method: HttpMethod
   url: string
+  timeoutMs: number
   sending: boolean
   onMethodChange: (method: HttpMethod) => void
   onUrlChange: (url: string) => void
+  onTimeoutChange: (timeoutMs: number) => void
   onSend: () => void
   onSaveCurrent: (name: string) => void
 }
 
-export function TopBar({ method, url, sending, onMethodChange, onUrlChange, onSend, onSaveCurrent }: TopBarProps) {
+export function TopBar({
+  method,
+  url,
+  timeoutMs,
+  sending,
+  onMethodChange,
+  onUrlChange,
+  onTimeoutChange,
+  onSend,
+  onSaveCurrent,
+}: TopBarProps) {
   const [savePopoverOpen, setSavePopoverOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
 
@@ -76,6 +88,20 @@ export function TopBar({ method, url, sending, onMethodChange, onUrlChange, onSe
       </div>
 
       <div className={styles.right}>
+        <label className={styles.timeoutField}>
+          <span className={styles.timeoutLabel}>Timeout</span>
+          <input
+            type="number"
+            className={styles.timeoutInput}
+            value={timeoutMs}
+            min={100}
+            max={60000}
+            step={100}
+            onChange={(e) => onTimeoutChange(e.target.valueAsNumber)}
+            aria-label="Timeout in milliseconds"
+          />
+          <span className={styles.timeoutUnit}>ms</span>
+        </label>
         <span className={styles.mockBadge}>demo API</span>
         <button
           type="button"

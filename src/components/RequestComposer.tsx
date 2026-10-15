@@ -1,4 +1,5 @@
-import type { HttpMethod, KeyValue } from '../api-client'
+import { buildRequest } from '../api-client'
+import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import { isValidJson } from '../lib/json'
 import type { RequestTab } from '../types/ui'
 import { KeyValueTable } from './KeyValueTable'
@@ -14,9 +15,11 @@ const METHODS_WITHOUT_BODY: HttpMethod[] = ['GET', 'DELETE']
 
 interface RequestComposerProps {
   method: HttpMethod
+  url: string
   params: KeyValue[]
   headers: KeyValue[]
   body: string
+  timeoutMs: number
   activeTab: RequestTab
   onTabChange: (tab: RequestTab) => void
   onParamsChange: (rows: KeyValue[]) => void
@@ -26,9 +29,11 @@ interface RequestComposerProps {
 
 export function RequestComposer({
   method,
+  url,
   params,
   headers,
   body,
+  timeoutMs,
   activeTab,
   onTabChange,
   onParamsChange,
@@ -36,6 +41,10 @@ export function RequestComposer({
   onBodyChange,
 }: RequestComposerProps) {
   const bodyIsInvalid = activeTab === 'body' && !isValidJson(body)
+
+  const draft: RequestDraft = { method, url, params, headers, body, timeoutMs }
+  const built = buildRequest(draft)
+  const hasExtraParams = params.some((p) => p.enabled && p.key.trim() !== '')
 
   return (
     <div className={styles.card}>
@@ -55,7 +64,20 @@ export function RequestComposer({
       </div>
 
       {activeTab === 'params' && (
-        <KeyValueTable rows={params} onChange={onParamsChange} addLabel="Add parameter" keyPlaceholder="key" valuePlaceholder="value" />
+        <>
+          {hasExtraParams && (
+            <div className={styles.effectiveUrl}>
+              {built.ok ? (
+                <>
+                  Effective URL: <code>{built.built.url}</code>
+                </>
+              ) : (
+                <span className={styles.bodyError}>Fix the URL in the top bar to preview the query string.</span>
+              )}
+            </div>
+          )}
+          <KeyValueTable rows={params} onChange={onParamsChange} addLabel="Add parameter" keyPlaceholder="key" valuePlaceholder="value" />
+        </>
       )}
 
       {activeTab === 'headers' && (

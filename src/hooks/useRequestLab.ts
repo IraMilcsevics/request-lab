@@ -3,6 +3,7 @@ import { sendRequest } from '../api-client'
 import type { ApiResult, KeyValue, RequestDraft } from '../api-client'
 import { createId } from '../lib/id'
 import { loadFromStorage, saveToStorage } from '../lib/storage'
+import { clampTimeoutMs } from '../lib/timeout'
 import type { HistoryEntry, RequestTab, ResponseTab, SavedRequest, SendState, SidebarTab } from '../types/ui'
 
 const HISTORY_KEY = 'requestlab:history'
@@ -54,7 +55,7 @@ export function useRequestLab() {
     setDraft((d) => ({ ...d, body }))
   }, [])
   const setTimeoutMs = useCallback((timeoutMs: number) => {
-    setDraft((d) => ({ ...d, timeoutMs }))
+    setDraft((d) => ({ ...d, timeoutMs: clampTimeoutMs(timeoutMs, d.timeoutMs) }))
   }, [])
 
   const loadDraft = useCallback((next: RequestDraft) => {

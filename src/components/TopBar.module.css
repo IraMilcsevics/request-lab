@@ -113,6 +113,42 @@
   position: relative;
 }
 
+.timeoutField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--text-faint);
+}
+
+.timeoutLabel {
+  font-size: 11px;
+}
+
+.timeoutInput {
+  width: 46px;
+  border: none;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.timeoutInput::-webkit-outer-spin-button,
+.timeoutInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.timeoutUnit {
+  font-size: 11px;
+}
+
 .mockBadge {
   font-family: var(--mono);
   font-size: 11px;

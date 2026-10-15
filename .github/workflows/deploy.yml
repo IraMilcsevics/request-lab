@@ -21,7 +21,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # MSW's internal handler controller uses Set.prototype.intersection,
+          # which needs Node 22+ — Node 20 fails with a cryptic "intersection
+          # is not a function" inside server.resetHandlers().
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test

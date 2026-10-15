@@ -1,0 +1,182 @@
+.bar {
+  height: 64px;
+  flex: 0 0 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.brandName {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.1px;
+}
+
+.composerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.methodGroup {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.methodButton {
+  border: none;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--mono);
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.urlField {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 38px;
+  background: var(--bg);
+}
+
+.urlInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+
+.sendButton {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  background: #1a1d1b;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sendButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.mockBadge {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.iconButton {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.savePopover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 220px;
+  z-index: 10;
+}
+
+.saveInput {
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font-size: 13px;
+}
+
+.saveActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.saveConfirm {
+  border: none;
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.saveCancel {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}

@@ -1,0 +1,26 @@
+.pre {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.key {
+  color: var(--accent);
+}
+
+.string {
+  color: #8a5a2f;
+}
+
+.number {
+  color: #2f5fa8;
+}
+
+.boolean,
+.null {
+  color: #7a4fb0;
+}

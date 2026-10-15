@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeResult, errorTitle, toneForErrorKind, toneForMethod, toneForStatus } from './status'
+import { describeResult, errorHint, errorTitle, toneForErrorKind, toneForMethod, toneForStatus } from './status'
 
 describe('toneForStatus', () => {
   it('maps status code families to tones', () => {
@@ -39,6 +39,21 @@ describe('errorTitle', () => {
     expect(errorTitle('aborted')).toBe('Request cancelled')
     expect(errorTitle('invalid-request')).toBe('Invalid request')
     expect(errorTitle('invalid-json')).toBe('Invalid JSON body')
+  })
+})
+
+describe('errorHint', () => {
+  it('gives a network error a CORS-aware hint, since the browser hides the real reason', () => {
+    const hint = errorHint('network')
+    expect(hint).toBeDefined()
+    expect(hint).toMatch(/CORS/)
+  })
+
+  it('gives no hint to error kinds whose message already says what happened', () => {
+    expect(errorHint('timeout')).toBeUndefined()
+    expect(errorHint('aborted')).toBeUndefined()
+    expect(errorHint('invalid-request')).toBeUndefined()
+    expect(errorHint('invalid-json')).toBeUndefined()
   })
 })
 

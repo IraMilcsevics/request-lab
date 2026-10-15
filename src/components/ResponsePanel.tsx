@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { ApiResult } from '../api-client'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
-import { errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
+import { errorHint, errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
 import type { ResponseTab, SendState } from '../types/ui'
 import { AlertIcon, CopyIcon, InboxIcon, SpinnerIcon } from './icons'
 import { JsonViewer } from './JsonViewer'
@@ -164,6 +164,7 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
             <div>
               <p className={styles.errorTitle}>{errorTitle(result.error.kind)}</p>
               <p className={styles.errorMessage}>{result.error.message}</p>
+              {errorHint(result.error.kind) && <p className={styles.errorHint}>{errorHint(result.error.kind)}</p>}
             </div>
           </div>
         </div>

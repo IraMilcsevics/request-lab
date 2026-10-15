@@ -108,4 +108,20 @@ describe('ResponsePanel — error results', () => {
     expect(screen.getByText('fetch failed')).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Body' })).not.toBeInTheDocument()
   })
+
+  it('shows a CORS-aware hint for a network error', () => {
+    renderPanel({
+      sendState: 'done',
+      result: { ok: false, error: { kind: 'network', message: 'Failed to fetch' } },
+    })
+    expect(screen.getByText(/CORS/)).toBeInTheDocument()
+  })
+
+  it('shows no hint for an error kind that already explains itself', () => {
+    renderPanel({
+      sendState: 'done',
+      result: { ok: false, error: { kind: 'timeout', message: 'Request timed out after 8000ms.' } },
+    })
+    expect(screen.queryByText(/CORS/)).not.toBeInTheDocument()
+  })
 })

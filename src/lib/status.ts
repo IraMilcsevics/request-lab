@@ -60,3 +60,15 @@ export function errorTitle(kind: ApiErrorKind): string {
 export function describeResult(result: ApiResult): string {
   return result.ok ? `${result.response.status} ${result.response.statusText}`.trim() : errorTitle(result.error.kind)
 }
+
+/**
+ * Extra context for an error whose message alone could mislead. A browser's
+ * `fetch` deliberately gives the same generic failure for a CORS rejection,
+ * an unreachable host, or a DNS/network problem — it never says which, so
+ * neither do we. Only `network` gets a hint; every other kind's message is
+ * already specific enough on its own.
+ */
+export function errorHint(kind: ApiErrorKind): string | undefined {
+  if (kind !== 'network') return undefined
+  return "Browsers don't say why a cross-origin request failed — it's usually a CORS policy blocking the response (the server needs to send Access-Control-Allow-Origin), but it can also mean the server is unreachable or there's a DNS/network problem. Check the browser console or the server's CORS headers for more."
+}

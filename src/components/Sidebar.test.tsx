@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { Environment, HistoryEntry, SavedRequest } from '../types/ui'
+import type { Collection, Environment, HistoryEntry, SavedRequest } from '../types/ui'
 import { Sidebar } from './Sidebar'
 
 const draft = {
@@ -37,6 +37,13 @@ function renderSidebar(overrides: Partial<ComponentProps<typeof Sidebar>> = {}) 
     onSelectSaved: vi.fn(),
     onDeleteSaved: vi.fn(),
     onDuplicateSaved: vi.fn(),
+    collections: [],
+    onAddCollection: vi.fn(),
+    onDeleteCollection: vi.fn(),
+    onRenameCollection: vi.fn(),
+    onMoveSavedToCollection: vi.fn(),
+    onExportSaved: vi.fn(() => '{}'),
+    onImportSaved: vi.fn(() => ({ ok: true as const })),
     onClearHistory: vi.fn(),
     onDeleteHistoryEntry: vi.fn(),
     environments: [],
@@ -227,5 +234,112 @@ describe('Sidebar environments', () => {
       ...env.variables,
       { key: '', value: '', enabled: true },
     ])
+  })
+})
+
+describe('Sidebar collections', () => {
+  const collection: Collection = { id: 'c1', name: 'Auth' }
+  const savedInCollection: SavedRequest = { id: 's1', name: 'Login', draft, collectionId: 'c1' }
+  const savedUncategorized: SavedRequest = { id: 's2', name: 'Get user', draft }
+
+  it('shows no "No collection" label when there are no collections yet', () => {
+    renderSidebar({ activeTab: 'saved', saved: [savedUncategorized] })
+    expect(screen.queryByText('No collection')).not.toBeInTheDocument()
+    expect(screen.getByText('Get user')).toBeInTheDocument()
+  })
+
+  it('adds a collection from the name field', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'saved' })
+
+    await user.type(screen.getByPlaceholderText('New collection name'), 'Auth')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(props.onAddCollection).toHaveBeenCalledWith('Auth')
+  })
+
+  it('groups saved requests under their collection, with uncategorized ones under "No collection"', () => {
+    renderSidebar({
+      activeTab: 'saved',
+      collections: [collection],
+      saved: [savedInCollection, savedUncategorized],
+    })
+
+    expect(screen.getByLabelText('Collection name')).toHaveValue('Auth')
+    expect(screen.getByText('Login')).toBeInTheDocument()
+    // "No collection" also appears as a <select> option — scope to the group label div.
+    expect(screen.getByText('No collection', { selector: 'div' })).toBeInTheDocument()
+    expect(screen.getByText('Get user')).toBeInTheDocument()
+  })
+
+  it('shows an empty-collection message when a collection has no requests', () => {
+    renderSidebar({ activeTab: 'saved', collections: [collection], saved: [] })
+    expect(screen.getByText('No requests in this collection.')).toBeInTheDocument()
+  })
+
+  it('renames a collection by editing its name field', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'saved', collections: [collection], saved: [savedInCollection] })
+
+    await user.type(screen.getByLabelText('Collection name'), 'X')
+    expect(props.onRenameCollection).toHaveBeenCalledWith('c1', 'AuthX')
+  })
+
+  it('deletes a collection', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'saved', collections: [collection], saved: [savedInCollection] })
+
+    await user.click(screen.getByRole('button', { name: 'Delete collection Auth' }))
+    expect(props.onDeleteCollection).toHaveBeenCalledWith('c1')
+  })
+
+  it('moves a request to another collection via its select', async () => {
+    const user = userEvent.setup()
+    const other: Collection = { id: 'c2', name: 'Other' }
+    const props = renderSidebar({
+      activeTab: 'saved',
+      collections: [collection, other],
+      saved: [savedInCollection],
+    })
+
+    await user.selectOptions(screen.getByLabelText('Move Login to collection'), 'c2')
+    expect(props.onMoveSavedToCollection).toHaveBeenCalledWith('s1', 'c2')
+  })
+
+  it('moves a request back to "No collection"', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'saved', collections: [collection], saved: [savedInCollection] })
+
+    await user.selectOptions(screen.getByLabelText('Move Login to collection'), '')
+    expect(props.onMoveSavedToCollection).toHaveBeenCalledWith('s1', undefined)
+  })
+
+  it('exports by calling onExportSaved and triggering a download', async () => {
+    const user = userEvent.setup()
+    const createObjectURL = vi.fn(() => 'blob:mock')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
+
+    const props = renderSidebar({ activeTab: 'saved' })
+    await user.click(screen.getByRole('button', { name: 'Export' }))
+
+    expect(props.onExportSaved).toHaveBeenCalled()
+    expect(createObjectURL).toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock')
+
+    vi.unstubAllGlobals()
+  })
+
+  it('imports a chosen file and reports a parse error', async () => {
+    const user = userEvent.setup()
+    const onImportSaved = vi.fn(() => ({ ok: false as const, error: 'That file is not valid JSON.' }))
+    renderSidebar({ activeTab: 'saved', onImportSaved })
+
+    const file = new File(['not json'], 'collections.json', { type: 'application/json' })
+    const input = screen.getByLabelText('Import collections file')
+    await user.upload(input, file)
+
+    await waitFor(() => expect(onImportSaved).toHaveBeenCalledWith('not json'))
+    expect(await screen.findByText(/Import failed: That file is not valid JSON\./)).toBeInTheDocument()
   })
 })

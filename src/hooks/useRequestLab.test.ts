@@ -400,3 +400,129 @@ describe('useRequestLab — environments', () => {
     expect(result.current.result?.ok).toBe(true)
   })
 })
+
+describe('useRequestLab — collections', () => {
+  it('starts with no collections', () => {
+    const { result } = renderHook(() => useRequestLab())
+    expect(result.current.collections).toEqual([])
+  })
+
+  it('addCollection creates one; ignores a blank name', () => {
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => result.current.addCollection('   '))
+    expect(result.current.collections).toEqual([])
+
+    act(() => result.current.addCollection('Auth'))
+    expect(result.current.collections).toHaveLength(1)
+    expect(result.current.collections[0].name).toBe('Auth')
+  })
+
+  it('renameCollection updates the name; ignores a blank one', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addCollection('Auth'))
+    const id = result.current.collections[0].id
+
+    act(() => result.current.renameCollection(id, 'Authentication'))
+    expect(result.current.collections[0].name).toBe('Authentication')
+
+    act(() => result.current.renameCollection(id, '  '))
+    expect(result.current.collections[0].name).toBe('Authentication')
+  })
+
+  it('moveSavedToCollection files a saved request under a collection, and back out', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addCollection('Auth'))
+    const collectionId = result.current.collections[0].id
+    act(() => result.current.saveCurrent('Login'))
+    const requestId = result.current.saved[0].id
+
+    act(() => result.current.moveSavedToCollection(requestId, collectionId))
+    expect(result.current.saved[0].collectionId).toBe(collectionId)
+
+    act(() => result.current.moveSavedToCollection(requestId, undefined))
+    expect(result.current.saved[0].collectionId).toBeUndefined()
+  })
+
+  it('deleteCollection removes it and un-files its requests rather than deleting them', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addCollection('Auth'))
+    const collectionId = result.current.collections[0].id
+    act(() => result.current.saveCurrent('Login'))
+    const requestId = result.current.saved[0].id
+    act(() => result.current.moveSavedToCollection(requestId, collectionId))
+
+    act(() => result.current.deleteCollection(collectionId))
+
+    expect(result.current.collections).toEqual([])
+    expect(result.current.saved).toHaveLength(1)
+    expect(result.current.saved[0].collectionId).toBeUndefined()
+  })
+
+  it('persists collections to localStorage', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addCollection('Auth'))
+
+    const stored = JSON.parse(localStorage.getItem('requestlab:collections') ?? '[]')
+    expect(stored).toHaveLength(1)
+    expect(stored[0].name).toBe('Auth')
+  })
+
+  it('exportSaved / importSaved round-trip, generating fresh ids and remapping collectionId', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addCollection('Auth'))
+    const originalCollectionId = result.current.collections[0].id
+    act(() => result.current.saveCurrent('Login'))
+    const originalRequestId = result.current.saved[0].id
+    act(() => result.current.moveSavedToCollection(originalRequestId, originalCollectionId))
+
+    const json = result.current.exportSaved()
+
+    // A fresh hook instance, as if opened in another browser/tab.
+    localStorage.clear()
+    const { result: other } = renderHook(() => useRequestLab())
+    act(() => {
+      const outcome = other.current.importSaved(json)
+      expect(outcome.ok).toBe(true)
+    })
+
+    expect(other.current.collections).toHaveLength(1)
+    expect(other.current.collections[0].name).toBe('Auth')
+    expect(other.current.collections[0].id).not.toBe(originalCollectionId)
+
+    expect(other.current.saved).toHaveLength(1)
+    expect(other.current.saved[0].name).toBe('Login')
+    expect(other.current.saved[0].id).not.toBe(originalRequestId)
+    expect(other.current.saved[0].collectionId).toBe(other.current.collections[0].id)
+  })
+
+  it('importSaved merges into existing data rather than replacing it', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.saveCurrent('Existing'))
+
+    const exportedElsewhere = JSON.stringify({
+      version: 1,
+      collections: [],
+      saved: [{ id: 'imported-1', name: 'Imported', draft: result.current.draft }],
+    })
+
+    act(() => {
+      result.current.importSaved(exportedElsewhere)
+    })
+
+    expect(result.current.saved.map((s) => s.name).sort()).toEqual(['Existing', 'Imported'])
+  })
+
+  it('importSaved reports a parse error and leaves existing data untouched', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.saveCurrent('Existing'))
+
+    let outcome: { ok: true } | { ok: false; error: string } = { ok: true }
+    act(() => {
+      outcome = result.current.importSaved('not json')
+    })
+
+    expect(outcome.ok).toBe(false)
+    expect(result.current.saved).toHaveLength(1)
+  })
+})

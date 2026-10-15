@@ -1,13 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { applyEnvironmentVariables, sendRequest } from '../api-client'
 import type { ApiResult, KeyValue, RequestDraft } from '../api-client'
+import { parseCollectionsImport, serializeCollections } from '../lib/collections'
 import { createId } from '../lib/id'
 import { loadFromStorage, saveToStorage } from '../lib/storage'
 import { clampTimeoutMs } from '../lib/timeout'
-import type { Environment, HistoryEntry, RequestTab, ResponseTab, SavedRequest, SendState, SidebarTab } from '../types/ui'
+import type {
+  Collection,
+  Environment,
+  HistoryEntry,
+  RequestTab,
+  ResponseTab,
+  SavedRequest,
+  SendState,
+  SidebarTab,
+} from '../types/ui'
 
 const HISTORY_KEY = 'requestlab:history'
 const SAVED_KEY = 'requestlab:saved'
+const COLLECTIONS_KEY = 'requestlab:collections'
 const ENVIRONMENTS_KEY = 'requestlab:environments'
 const ACTIVE_ENVIRONMENT_KEY = 'requestlab:activeEnvironmentId'
 const MAX_HISTORY = 25
@@ -33,6 +44,7 @@ export function useRequestLab() {
 
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadFromStorage(HISTORY_KEY, []))
   const [saved, setSaved] = useState<SavedRequest[]>(() => loadFromStorage(SAVED_KEY, []))
+  const [collections, setCollections] = useState<Collection[]>(() => loadFromStorage(COLLECTIONS_KEY, []))
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | undefined>(undefined)
 
   const [environments, setEnvironments] = useState<Environment[]>(() => loadFromStorage(ENVIRONMENTS_KEY, []))
@@ -45,6 +57,7 @@ export function useRequestLab() {
 
   useEffect(() => saveToStorage(HISTORY_KEY, history), [history])
   useEffect(() => saveToStorage(SAVED_KEY, saved), [saved])
+  useEffect(() => saveToStorage(COLLECTIONS_KEY, collections), [collections])
   useEffect(() => saveToStorage(ENVIRONMENTS_KEY, environments), [environments])
   useEffect(() => saveToStorage(ACTIVE_ENVIRONMENT_KEY, activeEnvironmentId), [activeEnvironmentId])
 
@@ -154,6 +167,55 @@ export function useRequestLab() {
     })
   }, [])
 
+  const addCollection = useCallback((name: string) => {
+    const trimmed = name.trim()
+    if (trimmed === '') return
+    setCollections((prev) => [...prev, { id: createId(), name: trimmed }])
+  }, [])
+
+  const deleteCollection = useCallback((id: string) => {
+    setCollections((prev) => prev.filter((c) => c.id !== id))
+    // Requests in a deleted collection aren't deleted — they just fall back
+    // to "no collection", same spirit as deleting an environment.
+    setSaved((prev) => prev.map((s) => (s.collectionId === id ? { ...s, collectionId: undefined } : s)))
+  }, [])
+
+  const renameCollection = useCallback((id: string, name: string) => {
+    const trimmed = name.trim()
+    if (trimmed === '') return
+    setCollections((prev) => prev.map((c) => (c.id === id ? { ...c, name: trimmed } : c)))
+  }, [])
+
+  const moveSavedToCollection = useCallback((requestId: string, collectionId: string | undefined) => {
+    setSaved((prev) => prev.map((s) => (s.id === requestId ? { ...s, collectionId } : s)))
+  }, [])
+
+  const exportSaved = useCallback(() => serializeCollections(collections, saved), [collections, saved])
+
+  const importSaved = useCallback((json: string): { ok: true } | { ok: false; error: string } => {
+    const result = parseCollectionsImport(json)
+    if (!result.ok) return result
+
+    // Fresh ids for everything imported, so importing the same file twice
+    // (or a file that happens to reuse ids) never collides with what's
+    // already here; collectionId references are remapped to match.
+    const idMap = new Map<string, string>()
+    const newCollections = result.collections.map((c) => {
+      const newId = createId()
+      idMap.set(c.id, newId)
+      return { ...c, id: newId }
+    })
+    const newSaved = result.saved.map((s) => ({
+      ...s,
+      id: createId(),
+      collectionId: s.collectionId ? idMap.get(s.collectionId) : undefined,
+    }))
+
+    setCollections((prev) => [...prev, ...newCollections])
+    setSaved((prev) => [...newSaved, ...prev])
+    return { ok: true }
+  }, [])
+
   const clearHistory = useCallback(() => {
     setHistory([])
     setSelectedHistoryId(undefined)
@@ -201,6 +263,7 @@ export function useRequestLab() {
     filter,
     history,
     saved,
+    collections,
     selectedHistoryId,
     environments,
     activeEnvironmentId,
@@ -222,6 +285,12 @@ export function useRequestLab() {
     saveCurrent,
     deleteSaved,
     duplicateSaved,
+    addCollection,
+    deleteCollection,
+    renameCollection,
+    moveSavedToCollection,
+    exportSaved,
+    importSaved,
     clearHistory,
     deleteHistoryEntry,
     addEnvironment,

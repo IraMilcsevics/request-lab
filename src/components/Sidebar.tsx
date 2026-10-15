@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import type { KeyValue } from '../api-client'
 import { matchesUrl } from '../lib/filter'
 import { formatRelativeTime } from '../lib/time'
 import { describeResult, toneColors, toneForErrorKind, toneForMethod, toneForStatus } from '../lib/status'
-import type { Environment, HistoryEntry, SavedRequest, SidebarTab } from '../types/ui'
+import type { Collection, Environment, HistoryEntry, SavedRequest, SidebarTab } from '../types/ui'
 import { BookmarkIcon, CopyIcon, PlusIcon, SearchIcon, TrashIcon } from './icons'
 import { KeyValueTable } from './KeyValueTable'
 import styles from './Sidebar.module.css'
@@ -26,6 +26,13 @@ interface SidebarProps {
   onSelectSaved: (item: SavedRequest) => void
   onDeleteSaved: (id: string) => void
   onDuplicateSaved: (id: string) => void
+  collections: Collection[]
+  onAddCollection: (name: string) => void
+  onDeleteCollection: (id: string) => void
+  onRenameCollection: (id: string, name: string) => void
+  onMoveSavedToCollection: (requestId: string, collectionId: string | undefined) => void
+  onExportSaved: () => string
+  onImportSaved: (json: string) => { ok: true } | { ok: false; error: string }
   onClearHistory: () => void
   onDeleteHistoryEntry: (id: string) => void
   environments: Environment[]
@@ -49,6 +56,13 @@ export function Sidebar({
   onSelectSaved,
   onDeleteSaved,
   onDuplicateSaved,
+  collections,
+  onAddCollection,
+  onDeleteCollection,
+  onRenameCollection,
+  onMoveSavedToCollection,
+  onExportSaved,
+  onImportSaved,
   onClearHistory,
   onDeleteHistoryEntry,
   environments,
@@ -60,6 +74,10 @@ export function Sidebar({
   onEnvironmentVariablesChange,
 }: SidebarProps) {
   const [newEnvName, setNewEnvName] = useState('')
+  const [newCollectionName, setNewCollectionName] = useState('')
+  const [importError, setImportError] = useState<string | undefined>(undefined)
+  const importInputRef = useRef<HTMLInputElement>(null)
+
   const visibleHistory = history.filter((entry) => matchesUrl(entry.draft.url, filter))
   const visibleSaved = saved.filter((item) => matchesUrl(item.draft.url, filter) || matchesUrl(item.name, filter))
 
@@ -67,6 +85,84 @@ export function Sidebar({
     if (newEnvName.trim() === '') return
     onAddEnvironment(newEnvName)
     setNewEnvName('')
+  }
+
+  function handleAddCollection() {
+    if (newCollectionName.trim() === '') return
+    onAddCollection(newCollectionName)
+    setNewCollectionName('')
+  }
+
+  function handleExport() {
+    const json = onExportSaved()
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'requestlab-collections.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleImportFileChosen(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // lets the same file be re-chosen later
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : ''
+      const result = onImportSaved(text)
+      setImportError(result.ok ? undefined : result.error)
+    }
+    reader.readAsText(file)
+  }
+
+  function renderSavedRow(item: SavedRequest) {
+    return (
+      <div key={item.id} className={styles.savedRow}>
+        <button type="button" className={styles.savedMain} onClick={() => onSelectSaved(item)}>
+          <BookmarkIcon size={14} />
+          <span className={styles.savedText}>
+            <span className={styles.savedName}>{item.name}</span>
+            <span className={styles.savedUrl}>
+              {item.draft.method} {item.draft.url.replace(/^https?:\/\//, '')}
+            </span>
+          </span>
+        </button>
+        {collections.length > 0 && (
+          <select
+            className={styles.collectionSelect}
+            value={item.collectionId ?? ''}
+            onChange={(e) => onMoveSavedToCollection(item.id, e.target.value === '' ? undefined : e.target.value)}
+            aria-label={`Move ${item.name} to collection`}
+          >
+            <option value="">No collection</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <button
+          type="button"
+          className={styles.savedDelete}
+          onClick={() => onDuplicateSaved(item.id)}
+          aria-label={`Duplicate saved request ${item.name}`}
+          title="Duplicate"
+        >
+          <CopyIcon />
+        </button>
+        <button
+          type="button"
+          className={styles.savedDelete}
+          onClick={() => onDeleteSaved(item.id)}
+          aria-label={`Delete saved request ${item.name}`}
+        >
+          <TrashIcon />
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -145,37 +241,74 @@ export function Sidebar({
 
       {activeTab === 'saved' && (
         <div className={styles.list}>
+          <div className={styles.savedToolbar}>
+            <button type="button" className={styles.envAddButton} onClick={handleExport}>
+              Export
+            </button>
+            <button type="button" className={styles.envAddButton} onClick={() => importInputRef.current?.click()}>
+              Import
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className={styles.hiddenFileInput}
+              onChange={handleImportFileChosen}
+              aria-label="Import collections file"
+            />
+          </div>
+          {importError && <div className={styles.importError}>Import failed: {importError}</div>}
+
+          <div className={styles.envAddRow}>
+            <input
+              type="text"
+              className={styles.envAddInput}
+              placeholder="New collection name"
+              value={newCollectionName}
+              onChange={(e) => setNewCollectionName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddCollection()
+              }}
+            />
+            <button type="button" className={styles.envAddButton} onClick={handleAddCollection}>
+              <PlusIcon />
+              Add
+            </button>
+          </div>
+
           {visibleSaved.length === 0 && <div className={styles.empty}>Nothing saved yet.</div>}
-          {visibleSaved.map((item) => (
-            <div key={item.id} className={styles.savedRow}>
-              <button type="button" className={styles.savedMain} onClick={() => onSelectSaved(item)}>
-                <BookmarkIcon size={14} />
-                <span className={styles.savedText}>
-                  <span className={styles.savedName}>{item.name}</span>
-                  <span className={styles.savedUrl}>
-                    {item.draft.method} {item.draft.url.replace(/^https?:\/\//, '')}
-                  </span>
-                </span>
-              </button>
-              <button
-                type="button"
-                className={styles.savedDelete}
-                onClick={() => onDuplicateSaved(item.id)}
-                aria-label={`Duplicate saved request ${item.name}`}
-                title="Duplicate"
-              >
-                <CopyIcon />
-              </button>
-              <button
-                type="button"
-                className={styles.savedDelete}
-                onClick={() => onDeleteSaved(item.id)}
-                aria-label={`Delete saved request ${item.name}`}
-              >
-                <TrashIcon />
-              </button>
-            </div>
-          ))}
+
+          {collections.map((collection) => {
+            const items = visibleSaved.filter((item) => item.collectionId === collection.id)
+            return (
+              <div key={collection.id} className={styles.envCard}>
+                <div className={styles.envHeader}>
+                  <input
+                    type="text"
+                    className={styles.envNameInput}
+                    value={collection.name}
+                    onChange={(e) => onRenameCollection(collection.id, e.target.value)}
+                    aria-label="Collection name"
+                  />
+                  <button
+                    type="button"
+                    className={styles.savedDelete}
+                    onClick={() => onDeleteCollection(collection.id)}
+                    aria-label={`Delete collection ${collection.name}`}
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+                <div className={styles.collectionItems}>
+                  {items.length === 0 && <div className={styles.empty}>No requests in this collection.</div>}
+                  {items.map(renderSavedRow)}
+                </div>
+              </div>
+            )
+          })}
+
+          {collections.length > 0 && <div className={styles.groupLabel}>No collection</div>}
+          {visibleSaved.filter((item) => !item.collectionId || !collections.some((c) => c.id === item.collectionId)).map(renderSavedRow)}
         </div>
       )}
 

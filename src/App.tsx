@@ -38,6 +38,13 @@ function App() {
           onSelectSaved={lab.loadSaved}
           onDeleteSaved={lab.deleteSaved}
           onDuplicateSaved={lab.duplicateSaved}
+          collections={lab.collections}
+          onAddCollection={lab.addCollection}
+          onDeleteCollection={lab.deleteCollection}
+          onRenameCollection={lab.renameCollection}
+          onMoveSavedToCollection={lab.moveSavedToCollection}
+          onExportSaved={lab.exportSaved}
+          onImportSaved={lab.importSaved}
           onClearHistory={lab.clearHistory}
           onDeleteHistoryEntry={lab.deleteHistoryEntry}
           environments={lab.environments}

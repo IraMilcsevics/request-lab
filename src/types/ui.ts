@@ -11,6 +11,13 @@ export interface SavedRequest {
   id: string
   name: string
   draft: RequestDraft
+  /** The collection this request is filed under, or undefined for "no collection". */
+  collectionId?: string
+}
+
+export interface Collection {
+  id: string
+  name: string
 }
 
 export interface Environment {

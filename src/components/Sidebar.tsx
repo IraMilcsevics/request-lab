@@ -21,6 +21,8 @@ interface SidebarProps {
   onSelectHistory: (entry: HistoryEntry) => void
   onSelectSaved: (item: SavedRequest) => void
   onDeleteSaved: (id: string) => void
+  onClearHistory: () => void
+  onDeleteHistoryEntry: (id: string) => void
 }
 
 export function Sidebar({
@@ -34,6 +36,8 @@ export function Sidebar({
   onSelectHistory,
   onSelectSaved,
   onDeleteSaved,
+  onClearHistory,
+  onDeleteHistoryEntry,
 }: SidebarProps) {
   const visibleHistory = history.filter((entry) => matchesUrl(entry.draft.url, filter))
   const visibleSaved = saved.filter((item) => matchesUrl(item.draft.url, filter) || matchesUrl(item.name, filter))
@@ -68,6 +72,11 @@ export function Sidebar({
 
       {activeTab === 'history' && (
         <div className={styles.list}>
+          {history.length > 0 && (
+            <button type="button" className={styles.clearAll} onClick={onClearHistory}>
+              Clear history
+            </button>
+          )}
           {visibleHistory.length === 0 && <div className={styles.empty}>No requests sent yet.</div>}
           {visibleHistory.map((entry) => {
             const methodTone = toneColors(toneForMethod(entry.draft.method))
@@ -76,21 +85,30 @@ export function Sidebar({
               : toneColors(toneForErrorKind(entry.result.error.kind))
             const statusLabel = describeResult(entry.result)
             return (
-              <button
-                key={entry.id}
-                type="button"
-                className={`${styles.row} ${entry.id === selectedHistoryId ? styles.rowSelected : ''}`}
-                onClick={() => onSelectHistory(entry)}
-              >
-                <span className={styles.method} style={{ color: methodTone.fg }}>
-                  {entry.draft.method}
-                </span>
-                <span className={styles.url}>{entry.draft.url.replace(/^https?:\/\//, '')}</span>
-                <span className={styles.dot} style={{ background: statusTone.fg }} title={statusLabel}>
-                  <span className={styles.srOnly}>{statusLabel}</span>
-                </span>
-                <span className={styles.time}>{formatRelativeTime(entry.sentAt)}</span>
-              </button>
+              <div key={entry.id} className={styles.historyRow}>
+                <button
+                  type="button"
+                  className={`${styles.row} ${entry.id === selectedHistoryId ? styles.rowSelected : ''}`}
+                  onClick={() => onSelectHistory(entry)}
+                >
+                  <span className={styles.method} style={{ color: methodTone.fg }}>
+                    {entry.draft.method}
+                  </span>
+                  <span className={styles.url}>{entry.draft.url.replace(/^https?:\/\//, '')}</span>
+                  <span className={styles.dot} style={{ background: statusTone.fg }} title={statusLabel}>
+                    <span className={styles.srOnly}>{statusLabel}</span>
+                  </span>
+                  <span className={styles.time}>{formatRelativeTime(entry.sentAt)}</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.savedDelete}
+                  onClick={() => onDeleteHistoryEntry(entry.id)}
+                  aria-label={`Delete history entry ${entry.draft.method} ${entry.draft.url}`}
+                >
+                  <TrashIcon />
+                </button>
+              </div>
             )
           })}
         </div>

@@ -36,6 +36,8 @@ function renderSidebar(overrides: Partial<ComponentProps<typeof Sidebar>> = {}) 
     onSelectHistory: vi.fn(),
     onSelectSaved: vi.fn(),
     onDeleteSaved: vi.fn(),
+    onClearHistory: vi.fn(),
+    onDeleteHistoryEntry: vi.fn(),
     ...overrides,
   }
   render(<Sidebar {...props} />)
@@ -74,6 +76,29 @@ describe('Sidebar history', () => {
 
     await user.click(screen.getByText('api.example.com/users/1'))
     expect(props.onSelectHistory).toHaveBeenCalledWith(entry)
+  })
+
+  it('hides the "Clear history" button when there is no history', () => {
+    renderSidebar({ history: [] })
+    expect(screen.queryByRole('button', { name: 'Clear history' })).not.toBeInTheDocument()
+  })
+
+  it('calls onClearHistory from the "Clear history" button', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ history: [historyEntry()] })
+
+    await user.click(screen.getByRole('button', { name: 'Clear history' }))
+    expect(props.onClearHistory).toHaveBeenCalled()
+  })
+
+  it('deletes a single history entry without triggering onSelectHistory', async () => {
+    const user = userEvent.setup()
+    const entry = historyEntry()
+    const props = renderSidebar({ history: [entry] })
+
+    await user.click(screen.getByRole('button', { name: /Delete history entry/ }))
+    expect(props.onDeleteHistoryEntry).toHaveBeenCalledWith(entry.id)
+    expect(props.onSelectHistory).not.toHaveBeenCalled()
   })
 
   it('filters history rows by URL substring', () => {

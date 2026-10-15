@@ -209,4 +209,49 @@ describe('useRequestLab — history and saved requests', () => {
     expect(result.current.saved).toHaveLength(1)
     expect(result.current.saved.find((s) => s.id === idToDelete)).toBeUndefined()
   })
+
+  it('clearHistory empties the list and the current selection, and persists it', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+    expect(result.current.history).toHaveLength(1)
+    expect(result.current.selectedHistoryId).toBeDefined()
+
+    act(() => result.current.clearHistory())
+
+    expect(result.current.history).toEqual([])
+    expect(result.current.selectedHistoryId).toBeUndefined()
+    expect(JSON.parse(localStorage.getItem('requestlab:history') ?? '[]')).toEqual([])
+  })
+
+  it('deleteHistoryEntry removes just that entry and clears the selection only if it was selected', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.history).toHaveLength(2))
+
+    const [latest, older] = result.current.history
+    expect(result.current.selectedHistoryId).toBe(latest.id)
+
+    // Deleting an entry that is NOT selected leaves the selection alone.
+    act(() => result.current.deleteHistoryEntry(older.id))
+    expect(result.current.history).toHaveLength(1)
+    expect(result.current.selectedHistoryId).toBe(latest.id)
+
+    // Deleting the SELECTED entry clears the selection too.
+    act(() => result.current.deleteHistoryEntry(latest.id))
+    expect(result.current.history).toHaveLength(0)
+    expect(result.current.selectedHistoryId).toBeUndefined()
+  })
 })

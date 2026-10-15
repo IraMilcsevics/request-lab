@@ -121,6 +121,16 @@ export function useRequestLab() {
     setSaved((prev) => prev.filter((item) => item.id !== id))
   }, [])
 
+  const clearHistory = useCallback(() => {
+    setHistory([])
+    setSelectedHistoryId(undefined)
+  }, [])
+
+  const deleteHistoryEntry = useCallback((id: string) => {
+    setHistory((prev) => prev.filter((entry) => entry.id !== id))
+    setSelectedHistoryId((current) => (current === id ? undefined : current))
+  }, [])
+
   return {
     draft,
     result,
@@ -148,6 +158,8 @@ export function useRequestLab() {
     loadSaved,
     saveCurrent,
     deleteSaved,
+    clearHistory,
+    deleteHistoryEntry,
   }
 }
 

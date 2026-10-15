@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react'
 import type { ApiResult } from '../api-client'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
-import { toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
+import { errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
 import type { ResponseTab, SendState } from '../types/ui'
 import { AlertIcon, CopyIcon, InboxIcon, SpinnerIcon } from './icons'
 import { JsonViewer } from './JsonViewer'
@@ -11,14 +11,6 @@ const TABS: Array<{ key: ResponseTab; label: string }> = [
   { key: 'body', label: 'Body' },
   { key: 'headers', label: 'Headers' },
 ]
-
-const ERROR_TITLES: Record<string, string> = {
-  'invalid-request': 'Invalid request',
-  'invalid-json': 'Invalid JSON body',
-  network: 'Network error',
-  timeout: 'Request timed out',
-  aborted: 'Request cancelled',
-}
 
 interface ResponsePanelProps {
   sendState: SendState
@@ -87,7 +79,7 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
               const tone = toneColors(toneForErrorKind(result.error.kind))
               return (
                 <span className={styles.badge} style={{ background: tone.bg, color: tone.fg, borderColor: tone.border }}>
-                  {ERROR_TITLES[result.error.kind] ?? 'Error'}
+                  {errorTitle(result.error.kind)}
                 </span>
               )
             })()}
@@ -142,7 +134,7 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
           <div className={styles.errorCard}>
             <AlertIcon size={22} />
             <div>
-              <p className={styles.errorTitle}>{ERROR_TITLES[result.error.kind] ?? 'Error'}</p>
+              <p className={styles.errorTitle}>{errorTitle(result.error.kind)}</p>
               <p className={styles.errorMessage}>{result.error.message}</p>
             </div>
           </div>

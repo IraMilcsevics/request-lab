@@ -22,7 +22,7 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Send' }))
 
-    expect(await screen.findByText(/200/)).toBeInTheDocument()
+    expect(await screen.findAllByText(/200/)).not.toHaveLength(0)
     expect(screen.getByText('"Ada Lovelace"')).toBeInTheDocument()
 
     // The sent request is recorded in the sidebar history.
@@ -65,7 +65,7 @@ describe('App', () => {
 
     await user.click(screen.getByRole('button', { name: 'Send' }))
 
-    expect(await screen.findByText(/404/)).toBeInTheDocument()
+    expect(await screen.findAllByText(/404/)).not.toHaveLength(0)
   })
 
   it('switches between Params, Headers and Body tabs', async () => {

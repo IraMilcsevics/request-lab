@@ -1,4 +1,4 @@
-import type { ApiErrorKind, HttpMethod } from '../api-client'
+import type { ApiErrorKind, ApiResult, HttpMethod } from '../api-client'
 
 export type Tone = 'success' | 'warn' | 'danger' | 'accent' | 'neutral'
 
@@ -42,4 +42,21 @@ const TONE_COLORS: Record<Tone, ToneColors> = {
 
 export function toneColors(tone: Tone): ToneColors {
   return TONE_COLORS[tone]
+}
+
+const ERROR_TITLES: Record<ApiErrorKind, string> = {
+  'invalid-request': 'Invalid request',
+  'invalid-json': 'Invalid JSON body',
+  network: 'Network error',
+  timeout: 'Request timed out',
+  aborted: 'Request cancelled',
+}
+
+export function errorTitle(kind: ApiErrorKind): string {
+  return ERROR_TITLES[kind]
+}
+
+/** A short, human-readable summary of a result — "200 OK" or an error's title — for tooltips and screen readers. */
+export function describeResult(result: ApiResult): string {
+  return result.ok ? `${result.response.status} ${result.response.statusText}`.trim() : errorTitle(result.error.kind)
 }

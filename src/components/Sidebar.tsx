@@ -1,6 +1,6 @@
 import { matchesUrl } from '../lib/filter'
 import { formatRelativeTime } from '../lib/time'
-import { toneColors, toneForErrorKind, toneForMethod, toneForStatus } from '../lib/status'
+import { describeResult, toneColors, toneForErrorKind, toneForMethod, toneForStatus } from '../lib/status'
 import type { HistoryEntry, SavedRequest, SidebarTab } from '../types/ui'
 import { BookmarkIcon, SearchIcon, TrashIcon } from './icons'
 import styles from './Sidebar.module.css'
@@ -74,6 +74,7 @@ export function Sidebar({
             const statusTone = entry.result.ok
               ? toneColors(toneForStatus(entry.result.response.status))
               : toneColors(toneForErrorKind(entry.result.error.kind))
+            const statusLabel = describeResult(entry.result)
             return (
               <button
                 key={entry.id}
@@ -85,7 +86,9 @@ export function Sidebar({
                   {entry.draft.method}
                 </span>
                 <span className={styles.url}>{entry.draft.url.replace(/^https?:\/\//, '')}</span>
-                <span className={styles.dot} style={{ background: statusTone.fg }} />
+                <span className={styles.dot} style={{ background: statusTone.fg }} title={statusLabel}>
+                  <span className={styles.srOnly}>{statusLabel}</span>
+                </span>
                 <span className={styles.time}>{formatRelativeTime(entry.sentAt)}</span>
               </button>
             )

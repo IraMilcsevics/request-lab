@@ -34,6 +34,7 @@ function App() {
           onSelectHistory={lab.loadFromHistory}
           onSelectSaved={lab.loadSaved}
           onDeleteSaved={lab.deleteSaved}
+          onDuplicateSaved={lab.duplicateSaved}
           onClearHistory={lab.clearHistory}
           onDeleteHistoryEntry={lab.deleteHistoryEntry}
         />

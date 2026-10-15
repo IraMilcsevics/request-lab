@@ -121,6 +121,16 @@ export function useRequestLab() {
     setSaved((prev) => prev.filter((item) => item.id !== id))
   }, [])
 
+  const duplicateSaved = useCallback((id: string) => {
+    setSaved((prev) => {
+      const index = prev.findIndex((item) => item.id === id)
+      if (index === -1) return prev
+      const original = prev[index]
+      const copy: SavedRequest = { id: createId(), name: `${original.name} copy`, draft: original.draft }
+      return [...prev.slice(0, index + 1), copy, ...prev.slice(index + 1)]
+    })
+  }, [])
+
   const clearHistory = useCallback(() => {
     setHistory([])
     setSelectedHistoryId(undefined)
@@ -158,6 +168,7 @@ export function useRequestLab() {
     loadSaved,
     saveCurrent,
     deleteSaved,
+    duplicateSaved,
     clearHistory,
     deleteHistoryEntry,
   }

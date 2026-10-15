@@ -36,6 +36,7 @@ function renderSidebar(overrides: Partial<ComponentProps<typeof Sidebar>> = {}) 
     onSelectHistory: vi.fn(),
     onSelectSaved: vi.fn(),
     onDeleteSaved: vi.fn(),
+    onDuplicateSaved: vi.fn(),
     onClearHistory: vi.fn(),
     onDeleteHistoryEntry: vi.fn(),
     ...overrides,
@@ -128,5 +129,16 @@ describe('Sidebar saved', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete saved request Get user' }))
     expect(props.onDeleteSaved).toHaveBeenCalledWith('s1')
+  })
+
+  it('calls onDuplicateSaved from the duplicate button, without selecting or deleting', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'saved', saved: [saved] })
+
+    await user.click(screen.getByRole('button', { name: 'Duplicate saved request Get user' }))
+
+    expect(props.onDuplicateSaved).toHaveBeenCalledWith('s1')
+    expect(props.onSelectSaved).not.toHaveBeenCalled()
+    expect(props.onDeleteSaved).not.toHaveBeenCalled()
   })
 })

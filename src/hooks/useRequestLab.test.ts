@@ -210,6 +210,32 @@ describe('useRequestLab — history and saved requests', () => {
     expect(result.current.saved.find((s) => s.id === idToDelete)).toBeUndefined()
   })
 
+  it('duplicateSaved inserts a named copy right after the original, sharing its draft', () => {
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => result.current.setUrl('https://api.example.com/users/1'))
+    act(() => result.current.saveCurrent('Get user'))
+    act(() => result.current.saveCurrent('Unrelated'))
+    expect(result.current.saved.map((s) => s.name)).toEqual(['Unrelated', 'Get user'])
+
+    const original = result.current.saved.find((s) => s.name === 'Get user')!
+    act(() => result.current.duplicateSaved(original.id))
+
+    expect(result.current.saved.map((s) => s.name)).toEqual(['Unrelated', 'Get user', 'Get user copy'])
+    const copy = result.current.saved[2]
+    expect(copy.id).not.toBe(original.id)
+    expect(copy.draft).toEqual(original.draft)
+  })
+
+  it('duplicateSaved is a no-op for an id that no longer exists', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.saveCurrent('One'))
+
+    act(() => result.current.duplicateSaved('does-not-exist'))
+
+    expect(result.current.saved).toHaveLength(1)
+  })
+
   it('clearHistory empties the list and the current selection, and persists it', async () => {
     server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
     const { result } = renderHook(() => useRequestLab())

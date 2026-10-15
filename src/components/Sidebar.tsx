@@ -2,7 +2,7 @@ import { matchesUrl } from '../lib/filter'
 import { formatRelativeTime } from '../lib/time'
 import { describeResult, toneColors, toneForErrorKind, toneForMethod, toneForStatus } from '../lib/status'
 import type { HistoryEntry, SavedRequest, SidebarTab } from '../types/ui'
-import { BookmarkIcon, SearchIcon, TrashIcon } from './icons'
+import { BookmarkIcon, CopyIcon, SearchIcon, TrashIcon } from './icons'
 import styles from './Sidebar.module.css'
 
 const TABS: Array<{ key: SidebarTab; label: string }> = [
@@ -21,6 +21,7 @@ interface SidebarProps {
   onSelectHistory: (entry: HistoryEntry) => void
   onSelectSaved: (item: SavedRequest) => void
   onDeleteSaved: (id: string) => void
+  onDuplicateSaved: (id: string) => void
   onClearHistory: () => void
   onDeleteHistoryEntry: (id: string) => void
 }
@@ -36,6 +37,7 @@ export function Sidebar({
   onSelectHistory,
   onSelectSaved,
   onDeleteSaved,
+  onDuplicateSaved,
   onClearHistory,
   onDeleteHistoryEntry,
 }: SidebarProps) {
@@ -127,6 +129,15 @@ export function Sidebar({
                     {item.draft.method} {item.draft.url.replace(/^https?:\/\//, '')}
                   </span>
                 </span>
+              </button>
+              <button
+                type="button"
+                className={styles.savedDelete}
+                onClick={() => onDuplicateSaved(item.id)}
+                aria-label={`Duplicate saved request ${item.name}`}
+                title="Duplicate"
+              >
+                <CopyIcon />
               </button>
               <button
                 type="button"

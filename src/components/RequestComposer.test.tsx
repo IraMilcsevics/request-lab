@@ -87,4 +87,9 @@ describe('RequestComposer body tab', () => {
     renderComposer({ activeTab: 'body', method: 'GET' })
     expect(screen.getByText(/usually don't send a body/)).toBeInTheDocument()
   })
+
+  it('treats PATCH like POST/PUT — no "skips a body" note', () => {
+    renderComposer({ activeTab: 'body', method: 'PATCH' })
+    expect(screen.queryByText(/usually don't send a body/)).not.toBeInTheDocument()
+  })
 })

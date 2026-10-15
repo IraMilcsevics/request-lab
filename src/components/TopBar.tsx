@@ -4,7 +4,7 @@ import { toneColors, toneForMethod } from '../lib/status'
 import { BookmarkIcon, SendIcon } from './icons'
 import styles from './TopBar.module.css'
 
-const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE']
+const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 interface TopBarProps {
   method: HttpMethod

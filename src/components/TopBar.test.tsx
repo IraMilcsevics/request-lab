@@ -21,6 +21,25 @@ function renderTopBar(overrides: Partial<ComponentProps<typeof TopBar>> = {}) {
   return props
 }
 
+describe('TopBar method selector', () => {
+  it('offers all five HTTP methods, including PATCH', () => {
+    renderTopBar()
+    expect(screen.getByRole('radio', { name: 'GET' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'POST' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'PUT' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'PATCH' })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'DELETE' })).toBeInTheDocument()
+  })
+
+  it('reports PATCH when selected', async () => {
+    const user = userEvent.setup()
+    const props = renderTopBar()
+
+    await user.click(screen.getByRole('radio', { name: 'PATCH' }))
+    expect(props.onMethodChange).toHaveBeenCalledWith('PATCH')
+  })
+})
+
 describe('TopBar timeout field', () => {
   it('shows the current timeout', () => {
     renderTopBar({ timeoutMs: 5000 })

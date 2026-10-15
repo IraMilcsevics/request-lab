@@ -1,0 +1,71 @@
+.tree {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.line {
+  display: flex;
+  align-items: flex-start;
+  white-space: pre;
+}
+
+.gutter {
+  flex: 0 0 auto;
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle {
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 14px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  color: var(--text-muted);
+}
+
+.chevron {
+  transition: transform 0.12s ease;
+}
+
+.chevronExpanded {
+  transform: rotate(90deg);
+}
+
+.key {
+  color: var(--accent);
+}
+
+.string {
+  color: #8a5a2f;
+}
+
+.number {
+  color: #2f5fa8;
+}
+
+.boolean,
+.null {
+  color: #7a4fb0;
+}
+
+.punctuation {
+  color: var(--text-faint);
+}
+
+.summary {
+  color: var(--text-ghost);
+  font-style: italic;
+}

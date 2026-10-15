@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { buildRequest, toCurl } from '../api-client'
+import { applyEnvironmentVariables, buildRequest, toCurl } from '../api-client'
 import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import { isValidJson } from '../lib/json'
 import type { RequestTab } from '../types/ui'
@@ -23,6 +23,7 @@ interface RequestComposerProps {
   headers: KeyValue[]
   body: string
   timeoutMs: number
+  envVariables: Record<string, string>
   activeTab: RequestTab
   onTabChange: (tab: RequestTab) => void
   onParamsChange: (rows: KeyValue[]) => void
@@ -37,6 +38,7 @@ export function RequestComposer({
   headers,
   body,
   timeoutMs,
+  envVariables,
   activeTab,
   onTabChange,
   onParamsChange,
@@ -46,9 +48,14 @@ export function RequestComposer({
   const [copied, setCopied] = useState(false)
   const bodyIsInvalid = activeTab === 'body' && !isValidJson(body)
 
-  const draft: RequestDraft = { method, url, params, headers, body, timeoutMs }
+  const rawDraft: RequestDraft = { method, url, params, headers, body, timeoutMs }
+  // Preview and cURL export both show the request as it will actually be
+  // sent — with any {{variables}} already resolved against the active
+  // environment, not the raw template still shown in the editors above.
+  const draft = applyEnvironmentVariables(rawDraft, envVariables)
   const built = buildRequest(draft)
   const hasExtraParams = params.some((p) => p.enabled && p.key.trim() !== '')
+  const urlIsTemplated = url.includes('{{')
 
   async function copyAsCurl() {
     if (!built.ok) return
@@ -92,12 +99,17 @@ export function RequestComposer({
 
       {activeTab === 'params' && (
         <>
-          {hasExtraParams && (
+          {(hasExtraParams || urlIsTemplated) && (
             <div className={styles.effectiveUrl}>
               {built.ok ? (
                 <>
                   Effective URL: <code>{built.built.url}</code>
                 </>
+              ) : draft.url.includes('{{') ? (
+                <span className={styles.bodyError}>
+                  Unresolved variable in <code>{draft.url}</code> — define it in the active environment, or pick one in
+                  the sidebar.
+                </span>
               ) : (
                 <span className={styles.bodyError}>Fix the URL in the top bar to preview the query string.</span>
               )}

@@ -11,11 +11,13 @@ interface TopBarProps {
   url: string
   timeoutMs: number
   sending: boolean
+  activeEnvironmentName: string | undefined
   onMethodChange: (method: HttpMethod) => void
   onUrlChange: (url: string) => void
   onTimeoutChange: (timeoutMs: number) => void
   onSend: () => void
   onSaveCurrent: (name: string) => void
+  onShowEnvironments: () => void
 }
 
 export function TopBar({
@@ -23,11 +25,13 @@ export function TopBar({
   url,
   timeoutMs,
   sending,
+  activeEnvironmentName,
   onMethodChange,
   onUrlChange,
   onTimeoutChange,
   onSend,
   onSaveCurrent,
+  onShowEnvironments,
 }: TopBarProps) {
   const [savePopoverOpen, setSavePopoverOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
@@ -102,6 +106,11 @@ export function TopBar({
           />
           <span className={styles.timeoutUnit}>ms</span>
         </label>
+        {activeEnvironmentName && (
+          <button type="button" className={styles.envBadge} onClick={onShowEnvironments} title="Manage environments">
+            {activeEnvironmentName}
+          </button>
+        )}
         <span className={styles.mockBadge}>demo API</span>
         <button
           type="button"

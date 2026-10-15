@@ -1,3 +1,4 @@
+export { applyEnvironmentVariables, substituteVariables } from './applyEnvironmentVariables'
 export { buildRequest } from './buildRequest'
 export { sendRequest } from './sendRequest'
 export { toCurl } from './toCurl'

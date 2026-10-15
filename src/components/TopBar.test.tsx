@@ -10,11 +10,13 @@ function renderTopBar(overrides: Partial<ComponentProps<typeof TopBar>> = {}) {
     url: 'https://api.example.com/things',
     timeoutMs: 8000,
     sending: false,
+    activeEnvironmentName: undefined,
     onMethodChange: vi.fn(),
     onUrlChange: vi.fn(),
     onTimeoutChange: vi.fn(),
     onSend: vi.fn(),
     onSaveCurrent: vi.fn(),
+    onShowEnvironments: vi.fn(),
     ...overrides,
   }
   render(<TopBar {...props} />)
@@ -61,6 +63,7 @@ describe('TopBar timeout field', () => {
           url="https://api.example.com/things"
           timeoutMs={timeoutMs}
           sending={false}
+          activeEnvironmentName={undefined}
           onMethodChange={() => {}}
           onUrlChange={() => {}}
           onTimeoutChange={(value) => {
@@ -69,6 +72,7 @@ describe('TopBar timeout field', () => {
           }}
           onSend={() => {}}
           onSaveCurrent={() => {}}
+          onShowEnvironments={() => {}}
         />
       )
     }
@@ -79,6 +83,24 @@ describe('TopBar timeout field', () => {
     await user.type(input, '3000')
 
     expect(onTimeoutChange).toHaveBeenLastCalledWith(3000)
+  })
+})
+
+describe('TopBar environment badge', () => {
+  it('shows no badge with no active environment', () => {
+    renderTopBar({ activeEnvironmentName: undefined })
+    expect(screen.queryByTitle('Manage environments')).not.toBeInTheDocument()
+  })
+
+  it('shows the active environment name and calls onShowEnvironments on click', async () => {
+    const user = userEvent.setup()
+    const props = renderTopBar({ activeEnvironmentName: 'Local' })
+
+    const badge = screen.getByText('Local')
+    expect(badge).toBeInTheDocument()
+
+    await user.click(badge)
+    expect(props.onShowEnvironments).toHaveBeenCalled()
   })
 })
 

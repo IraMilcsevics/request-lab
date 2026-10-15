@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { HistoryEntry, SavedRequest } from '../types/ui'
+import type { Environment, HistoryEntry, SavedRequest } from '../types/ui'
 import { Sidebar } from './Sidebar'
 
 const draft = {
@@ -39,6 +39,13 @@ function renderSidebar(overrides: Partial<ComponentProps<typeof Sidebar>> = {}) 
     onDuplicateSaved: vi.fn(),
     onClearHistory: vi.fn(),
     onDeleteHistoryEntry: vi.fn(),
+    environments: [],
+    activeEnvironmentId: undefined,
+    onSelectEnvironment: vi.fn(),
+    onAddEnvironment: vi.fn(),
+    onDeleteEnvironment: vi.fn(),
+    onRenameEnvironment: vi.fn(),
+    onEnvironmentVariablesChange: vi.fn(),
     ...overrides,
   }
   render(<Sidebar {...props} />)
@@ -140,5 +147,85 @@ describe('Sidebar saved', () => {
     expect(props.onDuplicateSaved).toHaveBeenCalledWith('s1')
     expect(props.onSelectSaved).not.toHaveBeenCalled()
     expect(props.onDeleteSaved).not.toHaveBeenCalled()
+  })
+})
+
+describe('Sidebar environments', () => {
+  const env: Environment = {
+    id: 'e1',
+    name: 'Local',
+    variables: [{ key: 'baseUrl', value: 'https://api.example.com', enabled: true }],
+  }
+
+  it('shows an empty message with no environments, but still offers "No environment"', () => {
+    renderSidebar({ activeTab: 'env', environments: [] })
+    expect(screen.getByText('No environments yet.')).toBeInTheDocument()
+    expect(screen.getByText('No environment')).toBeInTheDocument()
+  })
+
+  it('adds an environment from the name field and activates it', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env' })
+
+    await user.type(screen.getByPlaceholderText('New environment name'), 'Local')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+
+    expect(props.onAddEnvironment).toHaveBeenCalledWith('Local')
+  })
+
+  it('does not add a blank-named environment', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env' })
+
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(props.onAddEnvironment).not.toHaveBeenCalled()
+  })
+
+  it('selects an environment as active via its radio button', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env', environments: [env] })
+
+    await user.click(screen.getByRole('radio', { name: 'Use Local environment' }))
+    expect(props.onSelectEnvironment).toHaveBeenCalledWith('e1')
+  })
+
+  it('switches back to "No environment"', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env', environments: [env], activeEnvironmentId: 'e1' })
+
+    await user.click(screen.getByRole('radio', { name: 'No environment' }))
+    expect(props.onSelectEnvironment).toHaveBeenCalledWith(undefined)
+  })
+
+  it('renames an environment by editing its name field', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env', environments: [env] })
+
+    const nameInput = screen.getByLabelText('Environment name')
+    await user.type(nameInput, 'X')
+
+    expect(props.onRenameEnvironment).toHaveBeenCalledWith('e1', 'LocalX')
+  })
+
+  it('deletes an environment', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env', environments: [env] })
+
+    await user.click(screen.getByRole('button', { name: 'Delete environment Local' }))
+    expect(props.onDeleteEnvironment).toHaveBeenCalledWith('e1')
+  })
+
+  it('shows the environment’s variables and reports changes to them', async () => {
+    const user = userEvent.setup()
+    const props = renderSidebar({ activeTab: 'env', environments: [env] })
+
+    expect(screen.getByDisplayValue('baseUrl')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('https://api.example.com')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Add variable' }))
+    expect(props.onEnvironmentVariablesChange).toHaveBeenCalledWith('e1', [
+      ...env.variables,
+      { key: '', value: '', enabled: true },
+    ])
   })
 })

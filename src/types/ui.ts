@@ -1,4 +1,4 @@
-import type { ApiResult, RequestDraft } from '../api-client'
+import type { ApiResult, KeyValue, RequestDraft } from '../api-client'
 
 export interface HistoryEntry {
   id: string
@@ -13,7 +13,13 @@ export interface SavedRequest {
   draft: RequestDraft
 }
 
+export interface Environment {
+  id: string
+  name: string
+  variables: KeyValue[]
+}
+
 export type RequestTab = 'params' | 'headers' | 'body'
 export type ResponseTab = 'body' | 'headers'
-export type SidebarTab = 'history' | 'saved'
+export type SidebarTab = 'history' | 'saved' | 'env'
 export type SendState = 'idle' | 'loading' | 'done'

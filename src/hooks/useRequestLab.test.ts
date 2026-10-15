@@ -281,3 +281,122 @@ describe('useRequestLab — history and saved requests', () => {
     expect(result.current.selectedHistoryId).toBeUndefined()
   })
 })
+
+describe('useRequestLab — environments', () => {
+  it('starts with no environments and nothing active', () => {
+    const { result } = renderHook(() => useRequestLab())
+    expect(result.current.environments).toEqual([])
+    expect(result.current.activeEnvironmentId).toBeUndefined()
+    expect(result.current.activeVariables).toEqual({})
+  })
+
+  it('addEnvironment creates and activates a new, empty environment', () => {
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => result.current.addEnvironment('Local'))
+
+    expect(result.current.environments).toHaveLength(1)
+    expect(result.current.environments[0].name).toBe('Local')
+    expect(result.current.environments[0].variables).toEqual([])
+    expect(result.current.activeEnvironmentId).toBe(result.current.environments[0].id)
+  })
+
+  it('ignores a blank environment name', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('   '))
+    expect(result.current.environments).toEqual([])
+  })
+
+  it('setEnvironmentVariables updates only that environment, and activeVariables reflects enabled rows', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+    const id = result.current.environments[0].id
+
+    act(() =>
+      result.current.setEnvironmentVariables(id, [
+        { key: 'baseUrl', value: 'https://api.example.com', enabled: true },
+        { key: 'disabled', value: 'nope', enabled: false },
+      ]),
+    )
+
+    expect(result.current.activeVariables).toEqual({ baseUrl: 'https://api.example.com' })
+  })
+
+  it('renameEnvironment updates the name; ignores a blank one', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+    const id = result.current.environments[0].id
+
+    act(() => result.current.renameEnvironment(id, 'Production'))
+    expect(result.current.environments[0].name).toBe('Production')
+
+    act(() => result.current.renameEnvironment(id, '   '))
+    expect(result.current.environments[0].name).toBe('Production')
+  })
+
+  it('deleteEnvironment removes it and clears the active selection if it was active', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+    const id = result.current.environments[0].id
+    expect(result.current.activeEnvironmentId).toBe(id)
+
+    act(() => result.current.deleteEnvironment(id))
+
+    expect(result.current.environments).toEqual([])
+    expect(result.current.activeEnvironmentId).toBeUndefined()
+  })
+
+  it('setActiveEnvironment switches back to "no environment" with undefined', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+
+    act(() => result.current.setActiveEnvironment(undefined))
+
+    expect(result.current.activeEnvironmentId).toBeUndefined()
+    expect(result.current.activeVariables).toEqual({})
+  })
+
+  it('persists environments and the active id to localStorage', () => {
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+
+    const storedEnvs = JSON.parse(localStorage.getItem('requestlab:environments') ?? '[]')
+    expect(storedEnvs).toHaveLength(1)
+    expect(localStorage.getItem('requestlab:activeEnvironmentId')).toBe(JSON.stringify(result.current.environments[0].id))
+  })
+
+  it('send() resolves {{variables}} against the active environment before the request goes out, and records the resolved URL in history', async () => {
+    server.use(http.get('https://api.example.com/users/1', () => HttpResponse.json({ ok: true })))
+
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+    const id = result.current.environments[0].id
+    act(() =>
+      result.current.setEnvironmentVariables(id, [{ key: 'base', value: 'https://api.example.com', enabled: true }]),
+    )
+    act(() => result.current.setUrl('{{base}}/users/1'))
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    expect(result.current.result?.ok).toBe(true)
+    // The composer keeps the raw template...
+    expect(result.current.draft.url).toBe('{{base}}/users/1')
+    // ...but history records what was actually sent.
+    expect(result.current.history[0].draft.url).toBe('https://api.example.com/users/1')
+  })
+
+  it('send() leaves placeholders unresolved when no environment is active', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ ok: true })))
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    expect(result.current.result?.ok).toBe(true)
+  })
+})

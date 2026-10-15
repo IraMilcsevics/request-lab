@@ -12,6 +12,7 @@ function renderComposer(overrides: Partial<ComponentProps<typeof RequestComposer
     headers: [],
     body: '',
     timeoutMs: 8000,
+    envVariables: {},
     activeTab: 'params',
     onTabChange: vi.fn(),
     onParamsChange: vi.fn(),
@@ -46,6 +47,20 @@ describe('RequestComposer effective URL preview', () => {
     })
     expect(screen.getByText(/Fix the URL in the top bar/)).toBeInTheDocument()
   })
+
+  it('shows up for a templated URL even with no params, and resolves {{variables}}', () => {
+    renderComposer({
+      url: '{{baseUrl}}/users/{{id}}',
+      envVariables: { baseUrl: 'https://api.example.com', id: '42' },
+    })
+    expect(screen.getByText('https://api.example.com/users/42')).toBeInTheDocument()
+  })
+
+  it('names the unresolved variable, rather than a generic "fix the URL"', () => {
+    renderComposer({ url: '{{baseUrl}}/users', envVariables: {} })
+    expect(screen.getByText(/Unresolved variable/)).toBeInTheDocument()
+    expect(screen.getByText('{{baseUrl}}/users')).toBeInTheDocument()
+  })
 })
 
 describe('RequestComposer — Copy as cURL', () => {
@@ -69,6 +84,18 @@ describe('RequestComposer — Copy as cURL', () => {
       `curl -X POST -H 'content-type: application/json' -H 'x-trace: abc' -d '{"a":1}' 'https://api.example.com/things'`,
     )
     expect(await screen.findByText('Copied')).toBeInTheDocument()
+  })
+
+  it('copies the curl command with {{variables}} already resolved', async () => {
+    const user = userEvent.setup()
+    renderComposer({ url: '{{baseUrl}}/things', envVariables: { baseUrl: 'https://api.example.com' } })
+
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    await user.click(screen.getByRole('button', { name: 'Copy as cURL' }))
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("'https://api.example.com/things'"))
   })
 
   it('is disabled when the URL cannot be built', async () => {

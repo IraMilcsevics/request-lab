@@ -7,6 +7,7 @@ import { useRequestLab } from './hooks/useRequestLab'
 
 function App() {
   const lab = useRequestLab()
+  const activeEnvironmentName = lab.environments.find((env) => env.id === lab.activeEnvironmentId)?.name
 
   return (
     <div className={styles.app}>
@@ -15,11 +16,13 @@ function App() {
         url={lab.draft.url}
         timeoutMs={lab.draft.timeoutMs}
         sending={lab.sendState === 'loading'}
+        activeEnvironmentName={activeEnvironmentName}
         onMethodChange={lab.setMethod}
         onUrlChange={lab.setUrl}
         onTimeoutChange={lab.setTimeoutMs}
         onSend={lab.send}
         onSaveCurrent={lab.saveCurrent}
+        onShowEnvironments={() => lab.setSidebarTab('env')}
       />
 
       <div className={styles.bodyRow}>
@@ -37,6 +40,13 @@ function App() {
           onDuplicateSaved={lab.duplicateSaved}
           onClearHistory={lab.clearHistory}
           onDeleteHistoryEntry={lab.deleteHistoryEntry}
+          environments={lab.environments}
+          activeEnvironmentId={lab.activeEnvironmentId}
+          onSelectEnvironment={lab.setActiveEnvironment}
+          onAddEnvironment={lab.addEnvironment}
+          onDeleteEnvironment={lab.deleteEnvironment}
+          onRenameEnvironment={lab.renameEnvironment}
+          onEnvironmentVariablesChange={lab.setEnvironmentVariables}
         />
 
         <div className={styles.main}>
@@ -47,6 +57,7 @@ function App() {
             headers={lab.draft.headers}
             body={lab.draft.body ?? ''}
             timeoutMs={lab.draft.timeoutMs}
+            envVariables={lab.activeVariables}
             activeTab={lab.reqTab}
             onTabChange={lab.setReqTab}
             onParamsChange={lab.setParams}

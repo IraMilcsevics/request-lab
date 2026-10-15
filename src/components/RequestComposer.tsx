@@ -1,7 +1,9 @@
-import { buildRequest } from '../api-client'
+import { useState } from 'react'
+import { buildRequest, toCurl } from '../api-client'
 import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import { isValidJson } from '../lib/json'
 import type { RequestTab } from '../types/ui'
+import { CopyIcon } from './icons'
 import { KeyValueTable } from './KeyValueTable'
 import styles from './RequestComposer.module.css'
 
@@ -40,11 +42,24 @@ export function RequestComposer({
   onHeadersChange,
   onBodyChange,
 }: RequestComposerProps) {
+  const [copied, setCopied] = useState(false)
   const bodyIsInvalid = activeTab === 'body' && !isValidJson(body)
 
   const draft: RequestDraft = { method, url, params, headers, body, timeoutMs }
   const built = buildRequest(draft)
   const hasExtraParams = params.some((p) => p.enabled && p.key.trim() !== '')
+
+  async function copyAsCurl() {
+    if (!built.ok) return
+    try {
+      await navigator.clipboard.writeText(toCurl(built.built))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard access can be blocked (permissions, insecure context) — the
+      // request is still fully specified on screen to copy by hand.
+    }
+  }
 
   return (
     <div className={styles.card}>
@@ -61,6 +76,17 @@ export function RequestComposer({
             {tab.label}
           </button>
         ))}
+        <button
+          type="button"
+          className={styles.curlButton}
+          onClick={copyAsCurl}
+          disabled={!built.ok}
+          aria-label="Copy as cURL"
+          title={built.ok ? undefined : 'Fix the URL in the top bar to copy this request as cURL.'}
+        >
+          <CopyIcon size={12} />
+          <span className={styles.curlButtonLabel}>{copied ? 'Copied' : 'Copy as cURL'}</span>
+        </button>
       </div>
 
       {activeTab === 'params' && (

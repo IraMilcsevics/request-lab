@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { RequestComposer } from './RequestComposer'
@@ -44,6 +45,35 @@ describe('RequestComposer effective URL preview', () => {
       params: [{ key: 'q', value: 'cats', enabled: true }],
     })
     expect(screen.getByText(/Fix the URL in the top bar/)).toBeInTheDocument()
+  })
+})
+
+describe('RequestComposer — Copy as cURL', () => {
+  it('copies a built request as a curl command', async () => {
+    const user = userEvent.setup()
+    renderComposer({
+      method: 'POST',
+      url: 'https://api.example.com/things',
+      headers: [{ key: 'X-Trace', value: 'abc', enabled: true }],
+      body: '{"a":1}',
+    })
+
+    // userEvent.setup() installs its own navigator.clipboard stub, so the
+    // mock has to go in *after* that, not in a beforeEach.
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    await user.click(screen.getByRole('button', { name: 'Copy as cURL' }))
+
+    expect(writeText).toHaveBeenCalledWith(
+      `curl -X POST -H 'content-type: application/json' -H 'x-trace: abc' -d '{"a":1}' 'https://api.example.com/things'`,
+    )
+    expect(await screen.findByText('Copied')).toBeInTheDocument()
+  })
+
+  it('is disabled when the URL cannot be built', async () => {
+    renderComposer({ url: 'not a url' })
+    expect(screen.getByRole('button', { name: 'Copy as cURL' })).toBeDisabled()
   })
 })
 

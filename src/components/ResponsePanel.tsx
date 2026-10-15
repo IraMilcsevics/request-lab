@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import type { ApiResult } from '../api-client'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
 import { errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
@@ -22,6 +22,13 @@ interface ResponsePanelProps {
 
 export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCancel }: ResponsePanelProps) {
   const [copied, setCopied] = useState(false)
+  const [bodyView, setBodyView] = useState<'formatted' | 'raw'>('formatted')
+
+  // Each new response starts back in Formatted view, even if the previous
+  // one was left showing Raw.
+  useEffect(() => {
+    setBodyView('formatted')
+  }, [result])
 
   async function copyBody() {
     if (!result?.ok) return
@@ -103,16 +110,37 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
                 {tab.label}
               </button>
             ))}
+
+            {activeTab === 'body' && result.response.json !== undefined && (
+              <div className={styles.viewToggle} role="radiogroup" aria-label="Body view">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={bodyView === 'formatted'}
+                  className={`${styles.viewToggleButton} ${bodyView === 'formatted' ? styles.viewToggleActive : ''}`}
+                  onClick={() => setBodyView('formatted')}
+                >
+                  Formatted
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={bodyView === 'raw'}
+                  className={`${styles.viewToggleButton} ${bodyView === 'raw' ? styles.viewToggleActive : ''}`}
+                  onClick={() => setBodyView('raw')}
+                >
+                  Raw
+                </button>
+              </div>
+            )}
           </div>
 
           <div className={styles.content}>
             {activeTab === 'body' &&
-              (result.response.json !== undefined ? (
+              (result.response.json !== undefined && bodyView === 'formatted' ? (
                 <JsonViewer value={result.response.json} />
               ) : (
-                <pre style={{ margin: 0, fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-wrap' }}>
-                  {result.response.rawBody || '(empty body)'}
-                </pre>
+                <pre className={styles.rawBody}>{result.response.rawBody || '(empty body)'}</pre>
               ))}
 
             {activeTab === 'headers' && (

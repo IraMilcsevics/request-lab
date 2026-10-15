@@ -4,6 +4,7 @@ import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import { isValidJson } from '../lib/json'
 import type { RequestTab } from '../types/ui'
 import { CopyIcon } from './icons'
+import { JsonEditor } from './JsonEditor'
 import { KeyValueTable } from './KeyValueTable'
 import styles from './RequestComposer.module.css'
 
@@ -115,13 +116,11 @@ export function RequestComposer({
           {METHODS_WITHOUT_BODY.includes(method) && (
             <div className={styles.bodyNote}>{method} requests usually don't send a body — it will still be sent if you fill it in.</div>
           )}
-          <textarea
-            className={styles.bodyEditor}
+          <JsonEditor
             value={body}
-            onChange={(e) => onBodyChange(e.target.value)}
+            onChange={onBodyChange}
             placeholder={'{\n  "key": "value"\n}'}
-            aria-label="Request body (JSON)"
-            spellCheck={false}
+            ariaLabel="Request body (JSON)"
           />
           {bodyIsInvalid && <div className={styles.bodyError}>This isn't valid JSON — fix it before sending.</div>}
         </div>

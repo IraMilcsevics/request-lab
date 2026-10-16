@@ -115,6 +115,47 @@ describe('useRequestLab — cancel', () => {
       expect(result.current.result?.error.kind).toBe('aborted')
     }
   })
+
+  it('navigating away mid-send (loadFromHistory) is not overwritten when the abandoned send resolves', async () => {
+    server.use(
+      http.get(DEMO_URL, async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        return HttpResponse.json({ id: 1 })
+      }),
+    )
+    const { result } = renderHook(() => useRequestLab())
+
+    // Seed one history entry to navigate to.
+    server.use(http.get('https://example.com/other', () => HttpResponse.json({ ok: true })))
+    act(() => result.current.setUrl('https://example.com/other'))
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+    const otherEntry = result.current.history[0]
+
+    // Start a second, slow send, then navigate away before it resolves.
+    act(() => result.current.setUrl(DEMO_URL))
+    act(() => {
+      void result.current.send()
+    })
+    expect(result.current.sendState).toBe('loading')
+
+    act(() => result.current.loadFromHistory(otherEntry))
+    expect(result.current.sendState).toBe('idle')
+    expect(result.current.selectedHistoryId).toBe(otherEntry.id)
+
+    // Let the abandoned slow request's promise resolve; it must not clobber
+    // the state loadFromHistory just set, nor pollute history with a bogus
+    // "aborted" entry for a request the user already navigated away from.
+    await new Promise((resolve) => setTimeout(resolve, 250))
+
+    expect(result.current.sendState).toBe('idle')
+    expect(result.current.result).toBeUndefined()
+    expect(result.current.selectedHistoryId).toBe(otherEntry.id)
+    expect(result.current.history).toHaveLength(1)
+    expect(result.current.history[0].id).toBe(otherEntry.id)
+  })
 })
 
 describe('useRequestLab — draft setters', () => {

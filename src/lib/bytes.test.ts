@@ -9,6 +9,15 @@ describe('formatBytes', () => {
   it('shows one decimal of KB at or above 1024', () => {
     expect(formatBytes(1536)).toBe('1.5 KB')
   })
+
+  it('switches to MB at or above 1024 KB', () => {
+    expect(formatBytes(5 * 1024 * 1024)).toBe('5.0 MB')
+    expect(formatBytes(1024 * 1024)).toBe('1.0 MB')
+  })
+
+  it('switches to GB at or above 1024 MB', () => {
+    expect(formatBytes(2.5 * 1024 * 1024 * 1024)).toBe('2.5 GB')
+  })
 })
 
 describe('utf8ByteLength', () => {

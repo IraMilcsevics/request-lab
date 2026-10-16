@@ -57,7 +57,7 @@ export function extractJsonPath(root: unknown, path: string): JsonPathResult {
       current = current[index]
     } else {
       const record = current as Record<string, unknown>
-      if (!(segment in record)) {
+      if (!Object.prototype.hasOwnProperty.call(record, segment)) {
         return { ok: false, error: `No key "${segment}" in the response.` }
       }
       current = record[segment]

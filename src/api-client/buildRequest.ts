@@ -1,6 +1,6 @@
 import type { ApiError, BuiltRequest, KeyValue, RequestDraft } from './types'
 
-const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH'])
+const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 function toEnabledEntries(items: KeyValue[]): Array<[string, string]> {
   return items

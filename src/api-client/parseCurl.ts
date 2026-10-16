@@ -1,3 +1,4 @@
+import { base64EncodeUtf8 } from '../lib/base64'
 import type { HttpMethod, KeyValue, RequestDraft } from './types'
 
 const SUPPORTED_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -76,6 +77,32 @@ const IGNORED_FLAGS_WITH_ARG = new Set([
   '--retry',
 ])
 
+// Every flag that consumes the next token as its value — used to detect a
+// command truncated right after one of them (e.g. a paste cut off mid-copy),
+// so that's reported as "malformed" instead of silently falling through to
+// an inferred default for whatever the flag would have set.
+const FLAGS_WITH_ARG = new Set([
+  '-X',
+  '--request',
+  '-H',
+  '--header',
+  '-d',
+  '--data',
+  '--data-raw',
+  '--data-binary',
+  '--data-ascii',
+  '-u',
+  '--user',
+  '-A',
+  '--user-agent',
+  '-b',
+  '--cookie',
+  '-e',
+  '--referer',
+  '--max-time',
+  ...IGNORED_FLAGS_WITH_ARG,
+])
+
 export function parseCurl(input: string): ParseCurlResult {
   // `\` line continuations (as produced by most "Copy as cURL" exports) —
   // collapse to one line before tokenizing.
@@ -95,6 +122,10 @@ export function parseCurl(input: string): ParseCurlResult {
   for (; i < tokens.length; i++) {
     const token = tokens[i]
 
+    if (FLAGS_WITH_ARG.has(token) && i === tokens.length - 1) {
+      return { ok: false, error: `"${token}" is missing its value — the command looks truncated.` }
+    }
+
     if (token === '-X' || token === '--request') {
       explicitMethod = tokens[++i]
     } else if (token === '-H' || token === '--header') {
@@ -108,7 +139,7 @@ export function parseCurl(input: string): ParseCurlResult {
       body = body === undefined ? value : `${body}&${value}`
     } else if (token === '-u' || token === '--user') {
       const credentials = tokens[++i] ?? ''
-      headers.push({ key: 'Authorization', value: `Basic ${btoa(credentials)}`, enabled: true })
+      headers.push({ key: 'Authorization', value: `Basic ${base64EncodeUtf8(credentials)}`, enabled: true })
     } else if (token === '-A' || token === '--user-agent') {
       headers.push({ key: 'User-Agent', value: tokens[++i] ?? '', enabled: true })
     } else if (token === '-b' || token === '--cookie') {

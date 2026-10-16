@@ -127,6 +127,23 @@ describe('parseCurl — auth and misc flags', () => {
     }
   })
 
+  it('rejects a command truncated right after a flag that expects a value', () => {
+    expect(parseCurl('curl https://api.example.com/things -X').ok).toBe(false)
+    const result = parseCurl('curl https://api.example.com/things -X')
+    expect(result).toEqual({ ok: false, error: '"-X" is missing its value — the command looks truncated.' })
+  })
+
+  it('does not throw on non-ASCII -u credentials, and round-trips through Basic decoding', () => {
+    const result = parseCurl(`curl -u 'usér:pässwörd' 'https://api.example.com/things'`)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const header = result.draft.headers[0]
+      expect(header.key).toBe('Authorization')
+      const decoded = new TextDecoder().decode(Uint8Array.from(atob(header.value.slice('Basic '.length)), (c) => c.charCodeAt(0)))
+      expect(decoded).toBe('usér:pässwörd')
+    }
+  })
+
   it('maps -A/--user-agent to a User-Agent header', () => {
     const result = parseCurl(`curl -A 'MyAgent/1.0' 'https://api.example.com/things'`)
     expect(result.ok).toBe(true)

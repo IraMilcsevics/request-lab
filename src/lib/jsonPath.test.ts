@@ -70,4 +70,20 @@ describe('extractJsonPath', () => {
   it('resolves a value that is explicitly null', () => {
     expect(extractJsonPath({ id: null }, 'id')).toEqual({ ok: true, value: null })
   })
+
+  it('errors on "__proto__" rather than resolving an inherited prototype property', () => {
+    const result = extractJsonPath({}, '__proto__')
+    expect(result).toEqual({ ok: false, error: 'No key "__proto__" in the response.' })
+  })
+
+  it('errors on "constructor" rather than resolving an inherited prototype property', () => {
+    const result = extractJsonPath({}, 'constructor')
+    expect(result).toEqual({ ok: false, error: 'No key "constructor" in the response.' })
+  })
+
+  it('still resolves an own property literally named like a prototype key (JSON.parse creates a real own property, not a prototype mutation)', () => {
+    const data: unknown = JSON.parse('{"__proto__":"literal-value"}')
+    expect(Object.prototype.hasOwnProperty.call(data, '__proto__')).toBe(true)
+    expect(extractJsonPath(data, '__proto__')).toEqual({ ok: true, value: 'literal-value' })
+  })
 })

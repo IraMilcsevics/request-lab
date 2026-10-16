@@ -26,6 +26,9 @@ export function applyEnvironmentVariables(draft: RequestDraft, variables: Record
     url: substituteVariables(draft.url, variables),
     params: draft.params.map((p) => ({ ...p, value: substituteVariables(p.value, variables) })),
     headers: draft.headers.map((h) => ({ ...h, value: substituteVariables(h.value, variables) })),
-    body: draft.body !== undefined ? substituteVariables(draft.body, variables) : draft.body,
+    // Substitute unconditionally (substituteVariables('', ...) is just '')
+    // rather than special-casing undefined — a body of undefined vs '' is
+    // otherwise a fragile distinction for whether {{vars}} get resolved.
+    body: substituteVariables(draft.body ?? '', variables),
   }
 }

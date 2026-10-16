@@ -57,4 +57,52 @@ describe('parseCollectionsImport — rejecting bad input', () => {
     const result = parseCollectionsImport(serializeCollections([], []))
     expect(result).toEqual({ ok: true, collections: [], saved: [] })
   })
+
+  it('rejects a saved request whose draft is an empty object', () => {
+    const json = JSON.stringify({ collections: [], saved: [{ id: 's1', name: 'x', draft: {} }] })
+    expect(parseCollectionsImport(json).ok).toBe(false)
+  })
+
+  it('rejects a saved request whose draft has an invalid method', () => {
+    const json = JSON.stringify({
+      collections: [],
+      saved: [{ id: 's1', name: 'x', draft: { ...draft, method: 'FETCH' } }],
+    })
+    expect(parseCollectionsImport(json).ok).toBe(false)
+  })
+
+  it('rejects a saved request whose draft is missing a url', () => {
+    const { url: _url, ...withoutUrl } = draft
+    const json = JSON.stringify({ collections: [], saved: [{ id: 's1', name: 'x', draft: withoutUrl }] })
+    expect(parseCollectionsImport(json).ok).toBe(false)
+  })
+
+  it('rejects a saved request whose draft has a malformed params/headers entry', () => {
+    const json = JSON.stringify({
+      collections: [],
+      saved: [{ id: 's1', name: 'x', draft: { ...draft, headers: [{ key: 'X', value: 'y' }] } }],
+    })
+    expect(parseCollectionsImport(json).ok).toBe(false)
+  })
+
+  it('accepts a well-formed draft with params/headers/body present', () => {
+    const json = JSON.stringify({
+      collections: [],
+      saved: [
+        {
+          id: 's1',
+          name: 'x',
+          draft: {
+            method: 'POST',
+            url: 'https://api.example.com',
+            params: [{ key: 'q', value: '1', enabled: true }],
+            headers: [{ key: 'X', value: 'y', enabled: true }],
+            body: '{}',
+            timeoutMs: 5000,
+          },
+        },
+      ],
+    })
+    expect(parseCollectionsImport(json).ok).toBe(true)
+  })
 })

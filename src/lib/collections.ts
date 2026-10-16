@@ -1,4 +1,7 @@
+import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import type { Collection, SavedRequest } from '../types/ui'
+
+const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 const EXPORT_VERSION = 1
 
@@ -25,14 +28,38 @@ function isCollection(value: unknown): value is Collection {
   )
 }
 
+function isKeyValue(value: unknown): value is KeyValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as KeyValue).key === 'string' &&
+    typeof (value as KeyValue).value === 'string' &&
+    typeof (value as KeyValue).enabled === 'boolean'
+  )
+}
+
+function isRequestDraft(value: unknown): value is RequestDraft {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as RequestDraft
+  return (
+    HTTP_METHODS.includes(v.method) &&
+    typeof v.url === 'string' &&
+    Array.isArray(v.params) &&
+    v.params.every(isKeyValue) &&
+    Array.isArray(v.headers) &&
+    v.headers.every(isKeyValue) &&
+    (v.body === undefined || typeof v.body === 'string') &&
+    typeof v.timeoutMs === 'number'
+  )
+}
+
 function isSavedRequest(value: unknown): value is SavedRequest {
   if (typeof value !== 'object' || value === null) return false
   const v = value as SavedRequest
   return (
     typeof v.id === 'string' &&
     typeof v.name === 'string' &&
-    typeof v.draft === 'object' &&
-    v.draft !== null &&
+    isRequestDraft(v.draft) &&
     (v.collectionId === undefined || typeof v.collectionId === 'string')
   )
 }

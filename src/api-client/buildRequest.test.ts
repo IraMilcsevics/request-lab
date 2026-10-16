@@ -70,6 +70,18 @@ describe('buildRequest', () => {
     if (result.ok) expect(result.built.init.body).toBeUndefined()
   })
 
+  it('attaches a body for DELETE when one is filled in, matching the UI note that it will still be sent', () => {
+    const result = buildRequest(draft({ method: 'DELETE', body: '{"reason":"cleanup"}' }))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.built.init.body).toBe('{"reason":"cleanup"}')
+  })
+
+  it('omits the body for DELETE when none is filled in', () => {
+    const result = buildRequest(draft({ method: 'DELETE', body: '' }))
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.built.init.body).toBeUndefined()
+  })
+
   it('attaches a valid JSON body for POST and defaults Content-Type', () => {
     const result = buildRequest(draft({ method: 'POST', body: '{"a":1}' }))
     expect(result.ok).toBe(true)

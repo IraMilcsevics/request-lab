@@ -1,4 +1,5 @@
 import type { KeyValue } from '../api-client'
+import { base64DecodeUtf8, base64EncodeUtf8 } from './base64'
 
 export type AuthType = 'none' | 'bearer' | 'basic'
 
@@ -11,33 +12,16 @@ export interface AuthState {
 
 const AUTH_HEADER_KEY = 'authorization'
 
-function base64EncodeUtf8(text: string): string {
-  const bytes = new TextEncoder().encode(text)
-  let binary = ''
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b)
-  })
-  return btoa(binary)
-}
-
-function base64DecodeUtf8(encoded: string): string | undefined {
-  try {
-    const binary = atob(encoded)
-    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0))
-    return new TextDecoder().decode(bytes)
-  } catch {
-    return undefined
-  }
-}
-
 /**
  * Reads the current Authorization header (if any) back into Auth-tab
  * state, purely for display — nothing here writes anything. A header this
  * can't confidently parse as Bearer/Basic (or none at all) reads as 'none',
- * so the tab doesn't claim to manage a scheme it doesn't understand.
+ * so the tab doesn't claim to manage a scheme it doesn't understand. A
+ * *disabled* Authorization header also reads as 'none' — the request isn't
+ * actually sending it, so the Auth tab shouldn't claim it's active.
  */
 export function authStateFromHeaders(headers: KeyValue[]): AuthState {
-  const header = headers.find((h) => h.key.trim().toLowerCase() === AUTH_HEADER_KEY)
+  const header = headers.find((h) => h.enabled && h.key.trim().toLowerCase() === AUTH_HEADER_KEY)
   if (!header) return { type: 'none' }
 
   if (header.value.startsWith('Bearer ')) {

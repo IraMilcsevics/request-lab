@@ -76,8 +76,12 @@ describe('applyEnvironmentVariables', () => {
     expect(original.url).toBe(originalUrl)
   })
 
-  it('passes an undefined body through unchanged', () => {
+  it('treats an undefined body the same as an empty one, rather than skipping substitution', () => {
+    // Regression: body used to bypass substituteVariables entirely whenever
+    // it was exactly `undefined` (vs. `''`) — a fragile distinction nothing
+    // in the UI actually produces today, but any future draft missing a
+    // body field would have silently stopped resolving {{vars}} in it.
     const resolved = applyEnvironmentVariables(draft({ body: undefined }), variables)
-    expect(resolved.body).toBeUndefined()
+    expect(resolved.body).toBe('')
   })
 })

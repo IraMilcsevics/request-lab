@@ -100,6 +100,10 @@ export function useRequestLab() {
 
   const loadDraft = useCallback((next: RequestDraft) => {
     abortRef.current?.abort()
+    // Invalidate any send() still in flight: its own stale-response guard
+    // only checks requestIdRef, so without this, an aborted send landing
+    // after loadDraft would overwrite the draft/result we're about to set.
+    requestIdRef.current++
     setDraft(next)
     setResult(undefined)
     setSendState('idle')

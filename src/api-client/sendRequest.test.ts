@@ -77,6 +77,14 @@ describe('sendRequest', () => {
     if (!result.ok) expect(result.error.kind).toBe('timeout')
   })
 
+  it('treats a non-positive timeoutMs (e.g. from a malformed imported draft) as "use the max", not "already expired"', async () => {
+    server.use(http.get('https://api.example.com/things', () => HttpResponse.json({ ok: true })))
+
+    const result = await sendRequest(draft({ timeoutMs: 0 }))
+
+    expect(result.ok).toBe(true)
+  })
+
   it('reports an aborted request when the caller cancels it', async () => {
     server.use(
       http.get('https://api.example.com/things', async () => {

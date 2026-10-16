@@ -39,6 +39,11 @@ describe('authStateFromHeaders', () => {
     const headers: KeyValue[] = [{ key: 'Authorization', value: `Basic ${btoa('ada:se:cret')}`, enabled: true }]
     expect(authStateFromHeaders(headers)).toEqual({ type: 'basic', username: 'ada', password: 'se:cret' })
   })
+
+  it('reads "none" for a disabled Authorization header, since the request does not actually send it', () => {
+    const headers: KeyValue[] = [{ key: 'Authorization', value: 'Bearer abc123', enabled: false }]
+    expect(authStateFromHeaders(headers)).toEqual({ type: 'none' })
+  })
 })
 
 describe('applyAuthToHeaders', () => {

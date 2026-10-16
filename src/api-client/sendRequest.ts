@@ -1,3 +1,4 @@
+import { MAX_TIMEOUT_MS } from '../lib/timeout'
 import { buildRequest } from './buildRequest'
 import type { ApiResult, RequestDraft } from './types'
 
@@ -23,8 +24,16 @@ export async function sendRequest(draft: RequestDraft, externalSignal?: AbortSig
   const built = buildRequest(draft)
   if (!built.ok) return { ok: false, error: built.error }
 
+  // draft.timeoutMs normally only ever comes from the UI's own clamped
+  // input (which already enforces MIN_TIMEOUT_MS/MAX_TIMEOUT_MS), but a
+  // draft can also arrive from an import/saved-request path. Only guard
+  // against the genuinely degenerate cases here (zero, negative, NaN) —
+  // where setTimeout would fire immediately or never — without re-imposing
+  // the UI's full MIN_TIMEOUT_MS floor on every caller.
+  const timeoutMs = Number.isFinite(draft.timeoutMs) && draft.timeoutMs > 0 ? draft.timeoutMs : MAX_TIMEOUT_MS
+
   const timeoutController = new AbortController()
-  const timeoutId = setTimeout(() => timeoutController.abort(), draft.timeoutMs)
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs)
 
   const signal = externalSignal
     ? AbortSignal.any([timeoutController.signal, externalSignal])
@@ -62,7 +71,7 @@ export async function sendRequest(draft: RequestDraft, externalSignal?: AbortSig
     if (timeoutController.signal.aborted) {
       return {
         ok: false,
-        error: { kind: 'timeout', message: `Request timed out after ${draft.timeoutMs}ms.`, durationMs },
+        error: { kind: 'timeout', message: `Request timed out after ${timeoutMs}ms.`, durationMs },
       }
     }
     const message = cause instanceof Error ? cause.message : 'Network request failed.'

@@ -1,11 +1,10 @@
+import { filterEnabledKeyValues } from './filterEnabledKeyValues'
 import type { ApiError, BuiltRequest, KeyValue, RequestDraft } from './types'
 
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 function toEnabledEntries(items: KeyValue[]): Array<[string, string]> {
-  return items
-    .filter((item) => item.enabled && item.key.trim() !== '')
-    .map((item) => [item.key, item.value] as [string, string])
+  return filterEnabledKeyValues(items).map((item) => [item.key, item.value] as [string, string])
 }
 
 function appendQueryParams(rawUrl: string, params: KeyValue[]): string {

@@ -1,7 +1,9 @@
 import { Fragment, useState } from 'react'
+import { hasJsonBody } from '../api-client'
 import type { ApiResult } from '../api-client'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
-import { errorHint, errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
+import { errorHint, errorTitle, toneForErrorKind, toneForStatus, toneStyle } from '../lib/status'
 import type { ResponseTab, SendState } from '../types/ui'
 import { AlertIcon, CopyIcon, InboxIcon, LinkIcon, SpinnerIcon } from './icons'
 import { JsonViewer } from './JsonViewer'
@@ -22,7 +24,7 @@ interface ResponsePanelProps {
 }
 
 export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCancel, onExtractVariable }: ResponsePanelProps) {
-  const [copied, setCopied] = useState(false)
+  const { copied, copy } = useCopyFeedback()
   const [bodyView, setBodyView] = useState<'formatted' | 'raw'>('formatted')
   const [chainPanelOpen, setChainPanelOpen] = useState(false)
   const [chainPath, setChainPath] = useState('')
@@ -53,16 +55,9 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
     }
   }
 
-  async function copyBody() {
+  function copyBody() {
     if (!result?.ok) return
-    try {
-      await navigator.clipboard.writeText(result.response.rawBody)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard access can be blocked (permissions, insecure context); the
-      // response text is still right there on screen to select manually.
-    }
+    void copy(result.response.rawBody)
   }
 
   return (
@@ -85,19 +80,14 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
         {sendState === 'done' && result?.ok && (
           <>
             <div className={styles.headerGroup}>
-              {(() => {
-                const tone = toneColors(toneForStatus(result.response.status))
-                return (
-                  <span className={styles.badge} style={{ background: tone.bg, color: tone.fg, borderColor: tone.border }}>
-                    {result.response.status} {result.response.statusText}
-                  </span>
-                )
-              })()}
+              <span className={styles.badge} style={toneStyle(toneForStatus(result.response.status))}>
+                {result.response.status} {result.response.statusText}
+              </span>
               <span className={styles.meta}>{Math.round(result.response.durationMs)} ms</span>
               <span className={styles.meta}>{formatBytes(utf8ByteLength(result.response.rawBody))}</span>
             </div>
             <div className={styles.headerActions}>
-              {result.response.json !== undefined && (
+              {hasJsonBody(result) && (
                 <button
                   type="button"
                   className={styles.iconButton}
@@ -120,20 +110,15 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
 
         {sendState === 'done' && result && !result.ok && (
           <div className={styles.headerGroup}>
-            {(() => {
-              const tone = toneColors(toneForErrorKind(result.error.kind))
-              return (
-                <span className={styles.badge} style={{ background: tone.bg, color: tone.fg, borderColor: tone.border }}>
-                  {errorTitle(result.error.kind)}
-                </span>
-              )
-            })()}
+            <span className={styles.badge} style={toneStyle(toneForErrorKind(result.error.kind))}>
+              {errorTitle(result.error.kind)}
+            </span>
             {result.error.durationMs !== undefined && <span className={styles.meta}>{Math.round(result.error.durationMs)} ms</span>}
           </div>
         )}
       </div>
 
-      {chainPanelOpen && result?.ok && result.response.json !== undefined && (
+      {chainPanelOpen && hasJsonBody(result) && (
         <div className={styles.chainPanel}>
           <div className={styles.chainRow}>
             <label className={styles.chainLabel}>
@@ -188,7 +173,7 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
               </button>
             ))}
 
-            {activeTab === 'body' && result.response.json !== undefined && (
+            {activeTab === 'body' && hasJsonBody(result) && (
               <div className={styles.viewToggle} role="radiogroup" aria-label="Body view">
                 <button
                   type="button"
@@ -214,7 +199,7 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
 
           <div className={styles.content}>
             {activeTab === 'body' &&
-              (result.response.json !== undefined && bodyView === 'formatted' ? (
+              (hasJsonBody(result) && bodyView === 'formatted' ? (
                 <JsonViewer value={result.response.json} />
               ) : (
                 <pre className={styles.rawBody}>{result.response.rawBody || '(empty body)'}</pre>

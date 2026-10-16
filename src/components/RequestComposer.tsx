@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { applyEnvironmentVariables, buildRequest, toCurl } from '../api-client'
+import { applyEnvironmentVariables, buildRequest, filterEnabledKeyValues, toCurl } from '../api-client'
 import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
+import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { applyAuthToHeaders, authStateFromHeaders } from '../lib/auth'
 import type { AuthType } from '../lib/auth'
 import { isValidJson } from '../lib/json'
@@ -56,7 +57,7 @@ export function RequestComposer({
   onBodyChange,
   onImportCurl,
 }: RequestComposerProps) {
-  const [copied, setCopied] = useState(false)
+  const { copied, copy } = useCopyFeedback()
   const [curlPanelOpen, setCurlPanelOpen] = useState(false)
   const [curlText, setCurlText] = useState('')
   const [curlError, setCurlError] = useState<string | undefined>(undefined)
@@ -68,7 +69,7 @@ export function RequestComposer({
   // environment, not the raw template still shown in the editors above.
   const draft = applyEnvironmentVariables(rawDraft, envVariables)
   const built = buildRequest(draft)
-  const hasExtraParams = params.some((p) => p.enabled && p.key.trim() !== '')
+  const hasExtraParams = filterEnabledKeyValues(params).length > 0
   const urlIsTemplated = url.includes('{{')
   const authState = authStateFromHeaders(headers)
 
@@ -76,16 +77,9 @@ export function RequestComposer({
     onHeadersChange(applyAuthToHeaders(headers, next))
   }
 
-  async function copyAsCurl() {
+  function copyAsCurl() {
     if (!built.ok) return
-    try {
-      await navigator.clipboard.writeText(toCurl(built.built))
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard access can be blocked (permissions, insecure context) — the
-      // request is still fully specified on screen to copy by hand.
-    }
+    void copy(toCurl(built.built))
   }
 
   function handleImportCurl() {

@@ -1,5 +1,7 @@
 export { applyEnvironmentVariables, substituteVariables } from './applyEnvironmentVariables'
 export { buildRequest } from './buildRequest'
+export { filterEnabledKeyValues } from './filterEnabledKeyValues'
+export { hasJsonBody } from './hasJsonBody'
 export { parseCurl } from './parseCurl'
 export type { ParseCurlResult } from './parseCurl'
 export { sendRequest } from './sendRequest'

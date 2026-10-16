@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { applyEnvironmentVariables, parseCurl, sendRequest } from '../api-client'
+import { applyEnvironmentVariables, filterEnabledKeyValues, hasJsonBody, parseCurl, sendRequest } from '../api-client'
 import type { ApiResult, KeyValue, RequestDraft } from '../api-client'
 import { parseCollectionsImport, serializeCollections } from '../lib/collections'
 import { createId } from '../lib/id'
@@ -69,13 +69,11 @@ export function useRequestLab() {
 
   const activeEnvironment = environments.find((e) => e.id === activeEnvironmentId)
 
-  // Only enabled variables with a non-blank key resolve — mirrors how
-  // disabled/blank param & header rows are excluded when building a request.
+  // Only enabled variables with a non-blank key resolve — the same rule
+  // buildRequest applies to param/header rows, via filterEnabledKeyValues.
   const activeVariables = useMemo(() => {
     const record: Record<string, string> = {}
-    for (const v of activeEnvironment?.variables ?? []) {
-      if (v.enabled && v.key.trim() !== '') record[v.key] = v.value
-    }
+    for (const v of filterEnabledKeyValues(activeEnvironment?.variables ?? [])) record[v.key] = v.value
     return record
   }, [activeEnvironment])
 
@@ -306,7 +304,7 @@ export function useRequestLab() {
     (path: string, name: string): { ok: true } | { ok: false; error: string } => {
       const trimmedName = name.trim()
       if (trimmedName === '') return { ok: false, error: 'Variable name is required.' }
-      if (!result?.ok || result.response.json === undefined) {
+      if (!hasJsonBody(result)) {
         return { ok: false, error: 'Send a request with a JSON response first.' }
       }
 

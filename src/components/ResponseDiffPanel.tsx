@@ -1,4 +1,6 @@
-import { toneColors, toneForMethod, toneForStatus } from '../lib/status'
+import { hasJsonBody } from '../api-client'
+import { displayUrl } from '../lib/displayUrl'
+import { toneColors, toneForMethod, toneForStatus, toneStyle } from '../lib/status'
 import type { HistoryEntry } from '../types/ui'
 import { DiffViewer } from './DiffViewer'
 import styles from './ResponseDiffPanel.module.css'
@@ -10,19 +12,15 @@ interface ResponseDiffPanelProps {
 
 function SideHeader({ label, entry }: { label: string; entry: HistoryEntry }) {
   const methodTone = toneColors(toneForMethod(entry.draft.method))
-  const statusTone = entry.result.ok ? toneColors(toneForStatus(entry.result.response.status)) : undefined
   return (
     <div className={styles.side}>
       <span className={styles.sideLabel}>{label}</span>
       <span className={styles.sideMethod} style={{ color: methodTone.fg }}>
         {entry.draft.method}
       </span>
-      <span className={styles.sideUrl}>{entry.draft.url.replace(/^https?:\/\//, '')}</span>
-      {entry.result.ok && statusTone && (
-        <span
-          className={styles.sideBadge}
-          style={{ background: statusTone.bg, color: statusTone.fg, borderColor: statusTone.border }}
-        >
+      <span className={styles.sideUrl}>{displayUrl(entry.draft.url)}</span>
+      {entry.result.ok && (
+        <span className={styles.sideBadge} style={toneStyle(toneForStatus(entry.result.response.status))}>
           {entry.result.response.status}
         </span>
       )}
@@ -35,8 +33,6 @@ export function ResponseDiffPanel({ entries, onClose }: ResponseDiffPanelProps) 
   // Always show the earlier request as "Before" and the later one as
   // "After", regardless of the order they were picked in.
   const [beforeEntry, afterEntry] = [...entries].sort((a, b) => a.sentAt - b.sentAt)
-
-  const canDiff = beforeEntry.result.ok && afterEntry.result.ok && beforeEntry.result.response.json !== undefined && afterEntry.result.response.json !== undefined
 
   return (
     <div className={styles.card}>
@@ -53,7 +49,7 @@ export function ResponseDiffPanel({ entries, onClose }: ResponseDiffPanelProps) 
       </div>
 
       <div className={styles.content}>
-        {canDiff && beforeEntry.result.ok && afterEntry.result.ok ? (
+        {hasJsonBody(beforeEntry.result) && hasJsonBody(afterEntry.result) ? (
           <DiffViewer before={beforeEntry.result.response.json} after={afterEntry.result.response.json} />
         ) : (
           <p>Only requests with a JSON response can be compared.</p>

@@ -1,5 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { hasJsonBody } from '../api-client'
 import type { KeyValue } from '../api-client'
+import { displayUrl } from '../lib/displayUrl'
 import { matchesUrl } from '../lib/filter'
 import { formatRelativeTime } from '../lib/time'
 import { describeResult, toneColors, toneForErrorKind, toneForMethod, toneForStatus } from '../lib/status'
@@ -133,7 +135,7 @@ export function Sidebar({
           <span className={styles.savedText}>
             <span className={styles.savedName}>{item.name}</span>
             <span className={styles.savedUrl}>
-              {item.draft.method} {item.draft.url.replace(/^https?:\/\//, '')}
+              {item.draft.method} {displayUrl(item.draft.url)}
             </span>
           </span>
         </button>
@@ -211,7 +213,7 @@ export function Sidebar({
             </button>
           )}
 
-          {history.some((e) => e.result.ok && e.result.response.json !== undefined) && (
+          {history.some((e) => hasJsonBody(e.result)) && (
             <div className={styles.compareBar}>
               <span className={styles.compareCount}>
                 {compareIds.length === 0 ? 'Compare: pick 2 JSON responses' : `Compare: ${compareIds.length}/2 selected`}
@@ -234,7 +236,7 @@ export function Sidebar({
               ? toneColors(toneForStatus(entry.result.response.status))
               : toneColors(toneForErrorKind(entry.result.error.kind))
             const statusLabel = describeResult(entry.result)
-            const canCompare = entry.result.ok && entry.result.response.json !== undefined
+            const canCompare = hasJsonBody(entry.result)
             const isPicked = compareIds.includes(entry.id)
             return (
               <div key={entry.id} className={styles.historyRow}>
@@ -256,7 +258,7 @@ export function Sidebar({
                   <span className={styles.method} style={{ color: methodTone.fg }}>
                     {entry.draft.method}
                   </span>
-                  <span className={styles.url}>{entry.draft.url.replace(/^https?:\/\//, '')}</span>
+                  <span className={styles.url}>{displayUrl(entry.draft.url)}</span>
                   <span className={styles.dot} style={{ background: statusTone.fg }} title={statusLabel}>
                     <span className={styles.srOnly}>{statusLabel}</span>
                   </span>

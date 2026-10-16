@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { ApiErrorKind, ApiResult, HttpMethod } from '../api-client'
 
 export type Tone = 'success' | 'warn' | 'danger' | 'accent' | 'neutral'
@@ -42,6 +43,12 @@ const TONE_COLORS: Record<Tone, ToneColors> = {
 
 export function toneColors(tone: Tone): ToneColors {
   return TONE_COLORS[tone]
+}
+
+/** A tone's colors as an inline `style` object for a badge — background + text + border in one place, so a badge never ends up missing one of the three. */
+export function toneStyle(tone: Tone): CSSProperties {
+  const colors = toneColors(tone)
+  return { background: colors.bg, color: colors.fg, borderColor: colors.border }
 }
 
 const ERROR_TITLES: Record<ApiErrorKind, string> = {

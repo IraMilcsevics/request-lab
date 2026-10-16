@@ -27,6 +27,7 @@ function renderPanel(overrides: Partial<ComponentProps<typeof ResponsePanel>> = 
     activeTab: 'body',
     onTabChange: vi.fn(),
     onCancel: vi.fn(),
+    onExtractVariable: vi.fn(() => ({ ok: true }) as const),
     ...overrides,
   }
   render(<ResponsePanel {...props} />)
@@ -79,7 +80,14 @@ describe('ResponsePanel — Raw/Formatted toggle', () => {
 
   it('resets to Formatted when a new result comes in', () => {
     const { rerender } = render(
-      <ResponsePanel sendState="done" result={successResult()} activeTab="body" onTabChange={vi.fn()} onCancel={vi.fn()} />,
+      <ResponsePanel
+        sendState="done"
+        result={successResult()}
+        activeTab="body"
+        onTabChange={vi.fn()}
+        onCancel={vi.fn()}
+        onExtractVariable={vi.fn(() => ({ ok: true }) as const)}
+      />,
     )
 
     // Not interacting via click here to keep this test focused on the
@@ -91,10 +99,92 @@ describe('ResponsePanel — Raw/Formatted toggle', () => {
         activeTab="body"
         onTabChange={vi.fn()}
         onCancel={vi.fn()}
+        onExtractVariable={vi.fn(() => ({ ok: true }) as const)}
       />,
     )
 
     expect(screen.getByRole('radio', { name: 'Formatted' })).toHaveAttribute('aria-checked', 'true')
+  })
+})
+
+describe('ResponsePanel — save as variable (request chaining)', () => {
+  it('has no "Save as variable" button when the body is not JSON', () => {
+    renderPanel({
+      sendState: 'done',
+      result: successResult({ json: undefined, rawBody: 'plain text' }),
+    })
+    expect(screen.queryByRole('button', { name: /Save as variable/ })).not.toBeInTheDocument()
+  })
+
+  it('opens a panel with path/name fields, and Cancel closes it', async () => {
+    const user = userEvent.setup()
+    renderPanel({ sendState: 'done', result: successResult() })
+
+    await user.click(screen.getByRole('button', { name: /Save as variable/ }))
+    expect(screen.getByPlaceholderText('data.id or items[0].name')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('userId')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByPlaceholderText('data.id or items[0].name')).not.toBeInTheDocument()
+  })
+
+  it('calls onExtractVariable with the entered path and name, and shows a confirmation on success', async () => {
+    const user = userEvent.setup()
+    const onExtractVariable = vi.fn(() => ({ ok: true }) as const)
+    renderPanel({ sendState: 'done', result: successResult(), onExtractVariable })
+
+    await user.click(screen.getByRole('button', { name: /Save as variable/ }))
+    await user.type(screen.getByPlaceholderText('data.id or items[0].name'), 'id')
+    await user.type(screen.getByPlaceholderText('userId'), 'userId')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(onExtractVariable).toHaveBeenCalledWith('id', 'userId')
+    expect(screen.getByText('Saved as {{userId}}')).toBeInTheDocument()
+  })
+
+  it('shows the returned error message and no confirmation on failure', async () => {
+    const user = userEvent.setup()
+    const onExtractVariable = vi.fn(() => ({ ok: false, error: 'No key "missing" in the response.' }) as const)
+    renderPanel({ sendState: 'done', result: successResult(), onExtractVariable })
+
+    await user.click(screen.getByRole('button', { name: /Save as variable/ }))
+    await user.type(screen.getByPlaceholderText('data.id or items[0].name'), 'missing')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByText('No key "missing" in the response.')).toBeInTheDocument()
+    expect(screen.queryByText(/^Saved as/)).not.toBeInTheDocument()
+  })
+
+  it('closes the panel and clears its error when a new result comes in', async () => {
+    const user = userEvent.setup()
+    const onExtractVariable = vi.fn(() => ({ ok: false, error: 'No key "missing" in the response.' }) as const)
+    const { rerender } = render(
+      <ResponsePanel
+        sendState="done"
+        result={successResult()}
+        activeTab="body"
+        onTabChange={vi.fn()}
+        onCancel={vi.fn()}
+        onExtractVariable={onExtractVariable}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /Save as variable/ }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(screen.getByText('No key "missing" in the response.')).toBeInTheDocument()
+
+    rerender(
+      <ResponsePanel
+        sendState="done"
+        result={successResult({ json: { id: 2 }, rawBody: '{"id":2}' })}
+        activeTab="body"
+        onTabChange={vi.fn()}
+        onCancel={vi.fn()}
+        onExtractVariable={onExtractVariable}
+      />,
+    )
+
+    expect(screen.queryByPlaceholderText('data.id or items[0].name')).not.toBeInTheDocument()
   })
 })
 

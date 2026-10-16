@@ -89,6 +89,7 @@ function App() {
                 activeTab={lab.resTab}
                 onTabChange={lab.setResTab}
                 onCancel={lab.cancel}
+                onExtractVariable={lab.extractToVariable}
               />
             </>
           )}

@@ -3,6 +3,7 @@ import { applyEnvironmentVariables, parseCurl, sendRequest } from '../api-client
 import type { ApiResult, KeyValue, RequestDraft } from '../api-client'
 import { parseCollectionsImport, serializeCollections } from '../lib/collections'
 import { createId } from '../lib/id'
+import { extractJsonPath } from '../lib/jsonPath'
 import { loadFromStorage, saveToStorage } from '../lib/storage'
 import { clampTimeoutMs } from '../lib/timeout'
 import type {
@@ -294,6 +295,50 @@ export function useRequestLab() {
     setActiveEnvironmentId(id)
   }, [])
 
+  // Request chaining: pull a field out of the last response and store it as
+  // an environment variable, so a later request can reference it as
+  // {{name}} — e.g. chain a login response's token into the next header.
+  const extractToVariable = useCallback(
+    (path: string, name: string): { ok: true } | { ok: false; error: string } => {
+      const trimmedName = name.trim()
+      if (trimmedName === '') return { ok: false, error: 'Variable name is required.' }
+      if (!result?.ok || result.response.json === undefined) {
+        return { ok: false, error: 'Send a request with a JSON response first.' }
+      }
+
+      const extracted = extractJsonPath(result.response.json, path)
+      if (!extracted.ok) return extracted
+
+      const value = typeof extracted.value === 'string' ? extracted.value : JSON.stringify(extracted.value)
+
+      // No environment selected yet — create one to hold chained variables,
+      // rather than silently discarding the extraction.
+      let targetId = activeEnvironmentId
+      if (!targetId || !environments.some((env) => env.id === targetId)) {
+        targetId = createId()
+        const newId = targetId
+        setEnvironments((prev) => [...prev, { id: newId, name: 'Chain', variables: [] }])
+        setActiveEnvironmentId(newId)
+      }
+
+      const finalTargetId = targetId
+      setEnvironments((prev) =>
+        prev.map((env) => {
+          if (env.id !== finalTargetId) return env
+          const existingIndex = env.variables.findIndex((v) => v.key === trimmedName)
+          const nextVariables =
+            existingIndex === -1
+              ? [...env.variables, { key: trimmedName, value, enabled: true }]
+              : env.variables.map((v, i) => (i === existingIndex ? { ...v, value, enabled: true } : v))
+          return { ...env, variables: nextVariables }
+        }),
+      )
+
+      return { ok: true }
+    },
+    [result, activeEnvironmentId, environments],
+  )
+
   return {
     draft,
     result,
@@ -346,6 +391,7 @@ export function useRequestLab() {
     renameEnvironment,
     setEnvironmentVariables,
     setActiveEnvironment,
+    extractToVariable,
   }
 }
 

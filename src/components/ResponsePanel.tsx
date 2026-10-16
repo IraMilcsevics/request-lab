@@ -3,7 +3,7 @@ import type { ApiResult } from '../api-client'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
 import { errorHint, errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
 import type { ResponseTab, SendState } from '../types/ui'
-import { AlertIcon, CopyIcon, InboxIcon, SpinnerIcon } from './icons'
+import { AlertIcon, CopyIcon, InboxIcon, LinkIcon, SpinnerIcon } from './icons'
 import { JsonViewer } from './JsonViewer'
 import styles from './ResponsePanel.module.css'
 
@@ -18,17 +18,38 @@ interface ResponsePanelProps {
   activeTab: ResponseTab
   onTabChange: (tab: ResponseTab) => void
   onCancel: () => void
+  onExtractVariable: (path: string, name: string) => { ok: true } | { ok: false; error: string }
 }
 
-export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCancel }: ResponsePanelProps) {
+export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCancel, onExtractVariable }: ResponsePanelProps) {
   const [copied, setCopied] = useState(false)
   const [bodyView, setBodyView] = useState<'formatted' | 'raw'>('formatted')
+  const [chainPanelOpen, setChainPanelOpen] = useState(false)
+  const [chainPath, setChainPath] = useState('')
+  const [chainName, setChainName] = useState('')
+  const [chainError, setChainError] = useState<string | undefined>(undefined)
+  const [chainSaved, setChainSaved] = useState(false)
 
   // Each new response starts back in Formatted view, even if the previous
   // one was left showing Raw.
   useEffect(() => {
     setBodyView('formatted')
+    setChainPanelOpen(false)
+    setChainError(undefined)
+    setChainSaved(false)
   }, [result])
+
+  function handleExtractVariable() {
+    const outcome = onExtractVariable(chainPath, chainName)
+    if (outcome.ok) {
+      setChainError(undefined)
+      setChainSaved(true)
+      setTimeout(() => setChainSaved(false), 1500)
+    } else {
+      setChainError(outcome.error)
+      setChainSaved(false)
+    }
+  }
 
   async function copyBody() {
     if (!result?.ok) return
@@ -73,10 +94,25 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
               <span className={styles.meta}>{Math.round(result.response.durationMs)} ms</span>
               <span className={styles.meta}>{formatBytes(utf8ByteLength(result.response.rawBody))}</span>
             </div>
-            <button type="button" className={styles.iconButton} onClick={copyBody}>
-              <CopyIcon />
-              {copied ? 'Copied' : 'Copy'}
-            </button>
+            <div className={styles.headerActions}>
+              {result.response.json !== undefined && (
+                <button
+                  type="button"
+                  className={styles.iconButton}
+                  onClick={() => {
+                    setChainPanelOpen((open) => !open)
+                    setChainError(undefined)
+                  }}
+                >
+                  <LinkIcon />
+                  Save as variable
+                </button>
+              )}
+              <button type="button" className={styles.iconButton} onClick={copyBody}>
+                <CopyIcon />
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
           </>
         )}
 
@@ -94,6 +130,45 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
           </div>
         )}
       </div>
+
+      {chainPanelOpen && result?.ok && result.response.json !== undefined && (
+        <div className={styles.chainPanel}>
+          <div className={styles.chainRow}>
+            <label className={styles.chainLabel}>
+              JSON path
+              <input
+                type="text"
+                className={styles.chainInput}
+                value={chainPath}
+                onChange={(e) => setChainPath(e.target.value)}
+                placeholder="data.id or items[0].name"
+                spellCheck={false}
+              />
+            </label>
+            <label className={styles.chainLabel}>
+              Variable name
+              <input
+                type="text"
+                className={styles.chainInput}
+                value={chainName}
+                onChange={(e) => setChainName(e.target.value)}
+                placeholder="userId"
+                spellCheck={false}
+              />
+            </label>
+          </div>
+          {chainError && <div className={styles.bodyError}>{chainError}</div>}
+          <div className={styles.chainPanelActions}>
+            {chainSaved && <span className={styles.chainSaved}>Saved as {'{{' + chainName.trim() + '}}'}</span>}
+            <button type="button" className={styles.curlCancel} onClick={() => setChainPanelOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className={styles.curlConfirm} onClick={handleExtractVariable}>
+              Save
+            </button>
+          </div>
+        </div>
+      )}
 
       {sendState === 'done' && result?.ok && (
         <>

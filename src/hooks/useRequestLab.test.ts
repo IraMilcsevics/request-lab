@@ -508,6 +508,121 @@ describe('useRequestLab — environments', () => {
   })
 })
 
+describe('useRequestLab — request chaining (extractToVariable)', () => {
+  it('errors when there is no response yet', () => {
+    const { result } = renderHook(() => useRequestLab())
+    const outcome = result.current.extractToVariable('id', 'userId')
+    expect(outcome).toEqual({ ok: false, error: 'Send a request with a JSON response first.' })
+  })
+
+  it('errors on a blank variable name', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
+    const { result } = renderHook(() => useRequestLab())
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    const outcome = result.current.extractToVariable('id', '   ')
+    expect(outcome).toEqual({ ok: false, error: 'Variable name is required.' })
+  })
+
+  it('errors and changes nothing when the path does not resolve', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
+    const { result } = renderHook(() => useRequestLab())
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    const outcome = result.current.extractToVariable('missing', 'userId')
+    expect(outcome).toEqual({ ok: false, error: 'No key "missing" in the response.' })
+    expect(result.current.environments).toEqual([])
+  })
+
+  it('creates a "Chain" environment and activates it when none is active', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 42 })))
+    const { result } = renderHook(() => useRequestLab())
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    act(() => {
+      const outcome = result.current.extractToVariable('id', 'userId')
+      expect(outcome).toEqual({ ok: true })
+    })
+
+    expect(result.current.environments).toHaveLength(1)
+    expect(result.current.environments[0].name).toBe('Chain')
+    expect(result.current.activeEnvironmentId).toBe(result.current.environments[0].id)
+    expect(result.current.activeVariables).toEqual({ userId: '42' })
+  })
+
+  it('serializes a non-string extracted value as JSON, and a string value as-is', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 42, address: { city: 'Metropolis' } })))
+    const { result } = renderHook(() => useRequestLab())
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    act(() => {
+      result.current.extractToVariable('id', 'userId')
+    })
+    act(() => {
+      result.current.extractToVariable('address.city', 'city')
+    })
+    act(() => {
+      result.current.extractToVariable('address', 'addressObj')
+    })
+
+    expect(result.current.activeVariables).toEqual({
+      userId: '42',
+      city: 'Metropolis',
+      addressObj: '{"city":"Metropolis"}',
+    })
+  })
+
+  it('writes into the already-active environment instead of creating a new one', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 42 })))
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+    const envId = result.current.environments[0].id
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    act(() => {
+      result.current.extractToVariable('id', 'userId')
+    })
+
+    expect(result.current.environments).toHaveLength(1)
+    expect(result.current.environments[0].id).toBe(envId)
+    expect(result.current.environments[0].name).toBe('Local')
+  })
+
+  it('overwrites an existing variable of the same name rather than duplicating it', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 42 })))
+    const { result } = renderHook(() => useRequestLab())
+    act(() => result.current.addEnvironment('Local'))
+    act(() => result.current.setEnvironmentVariables(result.current.environments[0].id, [{ key: 'userId', value: 'old', enabled: false }]))
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+
+    act(() => {
+      result.current.extractToVariable('id', 'userId')
+    })
+
+    expect(result.current.environments[0].variables).toEqual([{ key: 'userId', value: '42', enabled: true }])
+  })
+})
+
 describe('useRequestLab — collections', () => {
   it('starts with no collections', () => {
     const { result } = renderHook(() => useRequestLab())

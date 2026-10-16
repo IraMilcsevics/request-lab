@@ -95,7 +95,7 @@
   border: none;
   border-radius: 8px;
   padding: 9px 18px;
-  background: #1a1d1b;
+  background: var(--ink);
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;

@@ -49,16 +49,16 @@
 }
 
 .string {
-  color: #8a5a2f;
+  color: var(--json-string);
 }
 
 .number {
-  color: #2f5fa8;
+  color: var(--json-number);
 }
 
 .boolean,
 .null {
-  color: #7a4fb0;
+  color: var(--json-literal);
 }
 
 .punctuation {

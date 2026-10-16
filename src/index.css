@@ -19,8 +19,15 @@
   --accent-soft: #e3eeec;
   --accent-soft-border: #c7dbd6;
 
+  /* A deliberately distinct near-black from --sidebar-bg: this is a
+     primary-action button's own dark treatment, not the sidebar panel. */
+  --ink: #1a1d1b;
+
   --sidebar-bg: #14171a;
+  --sidebar-text-bright: #f3f4f5;
+  --sidebar-text-primary: #e7e9ea;
   --sidebar-text: #d9dbdd;
+  --sidebar-text-dim: #7d8286;
   --sidebar-text-muted: #9aa0a6;
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --sidebar-hover: rgba(255, 255, 255, 0.07);
@@ -44,6 +51,12 @@
   --neutral-bg: #eeecea;
   --neutral-fg: #4a4844;
   --neutral-border: #d9d6cf;
+
+  /* JSON syntax highlighting — shared by the live-typed body editor and the
+     read-only response/diff tree viewers, so they can't visually drift. */
+  --json-string: #8a5a2f;
+  --json-number: #2f5fa8;
+  --json-literal: #7a4fb0;
 }
 
 * {

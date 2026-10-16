@@ -92,15 +92,6 @@
   color: var(--danger-fg);
 }
 
-.curlPanel {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .curlTextarea {
   width: 100%;
   min-height: 72px;
@@ -113,30 +104,6 @@
   color: var(--text);
   background: var(--surface);
   resize: vertical;
-}
-
-.curlPanelActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.curlConfirm {
-  border: none;
-  background: var(--accent);
-  color: #ffffff;
-  border-radius: 6px;
-  padding: 6px 14px;
-  font-size: 12.5px;
-}
-
-.curlCancel {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12.5px;
 }
 
 .authWrap {

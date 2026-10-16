@@ -6,6 +6,7 @@ import { applyAuthToHeaders, authStateFromHeaders } from '../lib/auth'
 import type { AuthType } from '../lib/auth'
 import { isValidJson } from '../lib/json'
 import type { RequestTab } from '../types/ui'
+import { ConfirmPanel } from './ConfirmPanel'
 import { CopyIcon, InboxIcon } from './icons'
 import { JsonEditor } from './JsonEditor'
 import { KeyValueTable } from './KeyValueTable'
@@ -135,7 +136,7 @@ export function RequestComposer({
       </div>
 
       {curlPanelOpen && (
-        <div className={styles.curlPanel}>
+        <ConfirmPanel confirmLabel="Import" error={curlError} onCancel={() => setCurlPanelOpen(false)} onConfirm={handleImportCurl}>
           <textarea
             className={styles.curlTextarea}
             value={curlText}
@@ -144,16 +145,7 @@ export function RequestComposer({
             aria-label="Paste a curl command"
             spellCheck={false}
           />
-          {curlError && <div className={styles.bodyError}>{curlError}</div>}
-          <div className={styles.curlPanelActions}>
-            <button type="button" className={styles.curlCancel} onClick={() => setCurlPanelOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className={styles.curlConfirm} onClick={handleImportCurl}>
-              Import
-            </button>
-          </div>
-        </div>
+        </ConfirmPanel>
       )}
 
       {activeTab === 'params' && (

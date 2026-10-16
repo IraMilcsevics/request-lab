@@ -5,6 +5,7 @@ import { useCopyFeedback } from '../hooks/useCopyFeedback'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
 import { errorHint, errorTitle, toneForErrorKind, toneForStatus, toneStyle } from '../lib/status'
 import type { ResponseTab, SendState } from '../types/ui'
+import { ConfirmPanel } from './ConfirmPanel'
 import { AlertIcon, CopyIcon, InboxIcon, LinkIcon, SpinnerIcon } from './icons'
 import { JsonViewer } from './JsonViewer'
 import styles from './ResponsePanel.module.css'
@@ -119,7 +120,13 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
       </div>
 
       {chainPanelOpen && hasJsonBody(result) && (
-        <div className={styles.chainPanel}>
+        <ConfirmPanel
+          confirmLabel="Save"
+          error={chainError}
+          success={chainSaved && `Saved as {{${chainName.trim()}}}`}
+          onCancel={() => setChainPanelOpen(false)}
+          onConfirm={handleExtractVariable}
+        >
           <div className={styles.chainRow}>
             <label className={styles.chainLabel}>
               JSON path
@@ -144,17 +151,7 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
               />
             </label>
           </div>
-          {chainError && <div className={styles.bodyError}>{chainError}</div>}
-          <div className={styles.chainPanelActions}>
-            {chainSaved && <span className={styles.chainSaved}>Saved as {'{{' + chainName.trim() + '}}'}</span>}
-            <button type="button" className={styles.curlCancel} onClick={() => setChainPanelOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className={styles.curlConfirm} onClick={handleExtractVariable}>
-              Save
-            </button>
-          </div>
-        </div>
+        </ConfirmPanel>
       )}
 
       {sendState === 'done' && result?.ok && (

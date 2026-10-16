@@ -282,6 +282,113 @@ describe('useRequestLab — history and saved requests', () => {
   })
 })
 
+describe('useRequestLab — response compare', () => {
+  async function sendTwice(result: { current: ReturnType<typeof useRequestLab> }) {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.history).toHaveLength(2))
+  }
+
+  it('toggleCompareSelection adds and removes ids, capping at 2', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a, b] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    expect(result.current.compareIds).toEqual([a.id])
+
+    act(() => result.current.toggleCompareSelection(b.id))
+    expect(result.current.compareIds).toEqual([a.id, b.id])
+
+    // A third pick (there's no third entry here, but even re-toggling a third
+    // id) is ignored once two are already selected.
+    act(() => result.current.toggleCompareSelection('some-other-id'))
+    expect(result.current.compareIds).toEqual([a.id, b.id])
+
+    // Deselecting one of the two frees up a slot again.
+    act(() => result.current.toggleCompareSelection(a.id))
+    expect(result.current.compareIds).toEqual([b.id])
+  })
+
+  it('clearCompareSelection empties the selection and exits comparing', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a, b] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    act(() => result.current.toggleCompareSelection(b.id))
+    act(() => result.current.startCompare())
+    expect(result.current.comparing).toBe(true)
+
+    act(() => result.current.clearCompareSelection())
+    expect(result.current.compareIds).toEqual([])
+    expect(result.current.comparing).toBe(false)
+  })
+
+  it('startCompare only activates once exactly 2 ids are selected', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    act(() => result.current.startCompare())
+    expect(result.current.comparing).toBe(false)
+
+    act(() => result.current.toggleCompareSelection(result.current.history[1].id))
+    act(() => result.current.startCompare())
+    expect(result.current.comparing).toBe(true)
+  })
+
+  it('exitCompare turns comparing off without clearing the selection', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a, b] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    act(() => result.current.toggleCompareSelection(b.id))
+    act(() => result.current.startCompare())
+    expect(result.current.comparing).toBe(true)
+
+    act(() => result.current.exitCompare())
+    expect(result.current.comparing).toBe(false)
+    expect(result.current.compareIds).toEqual([a.id, b.id])
+  })
+
+  it('clearHistory resets the compare selection and exits comparing', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a, b] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    act(() => result.current.toggleCompareSelection(b.id))
+    act(() => result.current.startCompare())
+
+    act(() => result.current.clearHistory())
+    expect(result.current.compareIds).toEqual([])
+    expect(result.current.comparing).toBe(false)
+  })
+
+  it('deleteHistoryEntry drops a deleted id from the selection and exits comparing', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a, b] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    act(() => result.current.toggleCompareSelection(b.id))
+    act(() => result.current.startCompare())
+
+    act(() => result.current.deleteHistoryEntry(a.id))
+    expect(result.current.compareIds).toEqual([b.id])
+    expect(result.current.comparing).toBe(false)
+  })
+})
+
 describe('useRequestLab — environments', () => {
   it('starts with no environments and nothing active', () => {
     const { result } = renderHook(() => useRequestLab())

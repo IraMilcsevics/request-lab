@@ -35,6 +35,10 @@ interface SidebarProps {
   onImportSaved: (json: string) => { ok: true } | { ok: false; error: string }
   onClearHistory: () => void
   onDeleteHistoryEntry: (id: string) => void
+  compareIds: string[]
+  onToggleCompare: (id: string) => void
+  onClearCompare: () => void
+  onStartCompare: () => void
   environments: Environment[]
   activeEnvironmentId: string | undefined
   onSelectEnvironment: (id: string | undefined) => void
@@ -65,6 +69,10 @@ export function Sidebar({
   onImportSaved,
   onClearHistory,
   onDeleteHistoryEntry,
+  compareIds,
+  onToggleCompare,
+  onClearCompare,
+  onStartCompare,
   environments,
   activeEnvironmentId,
   onSelectEnvironment,
@@ -202,6 +210,23 @@ export function Sidebar({
               Clear history
             </button>
           )}
+
+          {history.some((e) => e.result.ok && e.result.response.json !== undefined) && (
+            <div className={styles.compareBar}>
+              <span className={styles.compareCount}>
+                {compareIds.length === 0 ? 'Compare: pick 2 JSON responses' : `Compare: ${compareIds.length}/2 selected`}
+              </span>
+              {compareIds.length > 0 && (
+                <button type="button" className={styles.compareClear} onClick={onClearCompare}>
+                  Clear
+                </button>
+              )}
+              <button type="button" className={styles.compareGo} onClick={onStartCompare} disabled={compareIds.length !== 2}>
+                Compare
+              </button>
+            </div>
+          )}
+
           {visibleHistory.length === 0 && <div className={styles.empty}>No requests sent yet.</div>}
           {visibleHistory.map((entry) => {
             const methodTone = toneColors(toneForMethod(entry.draft.method))
@@ -209,8 +234,20 @@ export function Sidebar({
               ? toneColors(toneForStatus(entry.result.response.status))
               : toneColors(toneForErrorKind(entry.result.error.kind))
             const statusLabel = describeResult(entry.result)
+            const canCompare = entry.result.ok && entry.result.response.json !== undefined
+            const isPicked = compareIds.includes(entry.id)
             return (
               <div key={entry.id} className={styles.historyRow}>
+                {canCompare && (
+                  <input
+                    type="checkbox"
+                    className={styles.compareCheckbox}
+                    checked={isPicked}
+                    disabled={!isPicked && compareIds.length >= 2}
+                    onChange={() => onToggleCompare(entry.id)}
+                    aria-label={`Select ${entry.draft.method} ${entry.draft.url} for comparison`}
+                  />
+                )}
                 <button
                   type="button"
                   className={`${styles.row} ${entry.id === selectedHistoryId ? styles.rowSelected : ''}`}

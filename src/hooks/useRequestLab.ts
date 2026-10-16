@@ -42,6 +42,11 @@ export function useRequestLab() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('history')
   const [filter, setFilter] = useState('')
 
+  // Response-diff: which history entries are picked for comparison, and
+  // whether the diff view is actively showing (vs. just having a selection).
+  const [compareIds, setCompareIds] = useState<string[]>([])
+  const [comparing, setComparing] = useState(false)
+
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadFromStorage(HISTORY_KEY, []))
   const [saved, setSaved] = useState<SavedRequest[]>(() => loadFromStorage(SAVED_KEY, []))
   const [collections, setCollections] = useState<Collection[]>(() => loadFromStorage(COLLECTIONS_KEY, []))
@@ -230,11 +235,36 @@ export function useRequestLab() {
   const clearHistory = useCallback(() => {
     setHistory([])
     setSelectedHistoryId(undefined)
+    setCompareIds([])
+    setComparing(false)
   }, [])
 
   const deleteHistoryEntry = useCallback((id: string) => {
     setHistory((prev) => prev.filter((entry) => entry.id !== id))
     setSelectedHistoryId((current) => (current === id ? undefined : current))
+    setCompareIds((prev) => prev.filter((x) => x !== id))
+    setComparing(false) // deleting any entry ends an active comparison, to be safe
+  }, [])
+
+  const toggleCompareSelection = useCallback((id: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.length >= 2) return prev // a 3rd pick is ignored until one is deselected
+      return [...prev, id]
+    })
+  }, [])
+
+  const clearCompareSelection = useCallback(() => {
+    setCompareIds([])
+    setComparing(false)
+  }, [])
+
+  const startCompare = useCallback(() => {
+    setComparing((current) => current || compareIds.length === 2)
+  }, [compareIds])
+
+  const exitCompare = useCallback(() => {
+    setComparing(false)
   }, [])
 
   const addEnvironment = useCallback((name: string) => {
@@ -276,6 +306,8 @@ export function useRequestLab() {
     saved,
     collections,
     selectedHistoryId,
+    compareIds,
+    comparing,
     environments,
     activeEnvironmentId,
     activeVariables,
@@ -305,6 +337,10 @@ export function useRequestLab() {
     importSaved,
     clearHistory,
     deleteHistoryEntry,
+    toggleCompareSelection,
+    clearCompareSelection,
+    startCompare,
+    exitCompare,
     addEnvironment,
     deleteEnvironment,
     renameEnvironment,

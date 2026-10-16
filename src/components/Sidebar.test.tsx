@@ -18,7 +18,7 @@ function historyEntry(overrides: Partial<HistoryEntry> = {}): HistoryEntry {
   return {
     id: 'h1',
     draft,
-    result: { ok: true, response: { status: 200, statusText: 'OK', headers: {}, rawBody: '{}', durationMs: 50 } },
+    result: { ok: true, response: { status: 200, statusText: 'OK', headers: {}, rawBody: '{}', json: {}, durationMs: 50 } },
     sentAt: Date.now(),
     ...overrides,
   }
@@ -46,6 +46,10 @@ function renderSidebar(overrides: Partial<ComponentProps<typeof Sidebar>> = {}) 
     onImportSaved: vi.fn(() => ({ ok: true as const })),
     onClearHistory: vi.fn(),
     onDeleteHistoryEntry: vi.fn(),
+    compareIds: [],
+    onToggleCompare: vi.fn(),
+    onClearCompare: vi.fn(),
+    onStartCompare: vi.fn(),
     environments: [],
     activeEnvironmentId: undefined,
     onSelectEnvironment: vi.fn(),
@@ -341,5 +345,66 @@ describe('Sidebar collections', () => {
 
     await waitFor(() => expect(onImportSaved).toHaveBeenCalledWith('not json'))
     expect(await screen.findByText(/Import failed: That file is not valid JSON\./)).toBeInTheDocument()
+  })
+})
+
+describe('Sidebar — response compare', () => {
+  it('shows no compare bar when no history entry has a JSON response', () => {
+    renderSidebar({
+      history: [historyEntry({ result: { ok: false, error: { kind: 'network', message: 'x' } } })],
+    })
+    expect(screen.queryByText(/Compare:/)).not.toBeInTheDocument()
+  })
+
+  it('shows a compare checkbox only for entries with a JSON response', () => {
+    const jsonEntry = historyEntry({ id: 'j1' })
+    const errorEntry = historyEntry({
+      id: 'e1',
+      result: { ok: false, error: { kind: 'network', message: 'x' } },
+    })
+    renderSidebar({ history: [jsonEntry, errorEntry] })
+
+    expect(screen.getByLabelText(/Select GET .* for comparison/)).toBeInTheDocument()
+    expect(screen.getAllByLabelText(/Select GET .* for comparison/)).toHaveLength(1)
+  })
+
+  it('toggles a selection via its checkbox', async () => {
+    const user = userEvent.setup()
+    const entry = historyEntry()
+    const props = renderSidebar({ history: [entry] })
+
+    await user.click(screen.getByLabelText(/Select GET .* for comparison/))
+    expect(props.onToggleCompare).toHaveBeenCalledWith('h1')
+  })
+
+  it('disables unchecked checkboxes once 2 are already selected', () => {
+    const a = historyEntry({ id: 'a' })
+    const b = historyEntry({ id: 'b' })
+    const c = historyEntry({ id: 'c' })
+    renderSidebar({ history: [a, b, c], compareIds: ['a', 'b'] })
+
+    const checkboxes = screen.getAllByLabelText(/Select GET .* for comparison/)
+    expect(checkboxes[0]).not.toBeDisabled() // a — already selected, stays togglable
+    expect(checkboxes[1]).not.toBeDisabled() // b — already selected, stays togglable
+    expect(checkboxes[2]).toBeDisabled() // c — a 3rd pick is blocked
+  })
+
+  it('enables Compare only once exactly 2 are selected', () => {
+    renderSidebar({ history: [historyEntry()], compareIds: ['h1'] })
+    expect(screen.getByRole('button', { name: 'Compare' })).toBeDisabled()
+  })
+
+  it('calls onStartCompare and onClearCompare', async () => {
+    const user = userEvent.setup()
+    const a = historyEntry({ id: 'a' })
+    const b = historyEntry({ id: 'b' })
+    const props = renderSidebar({ history: [a, b], compareIds: ['a', 'b'] })
+
+    expect(screen.getByRole('button', { name: 'Compare' })).not.toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Compare' }))
+    expect(props.onStartCompare).toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(props.onClearCompare).toHaveBeenCalled()
   })
 })

@@ -1,0 +1,91 @@
+.wrap {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  padding-bottom: 10px;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.line {
+  display: flex;
+  align-items: flex-start;
+  white-space: pre;
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.marker {
+  flex: 0 0 auto;
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.unchanged {
+  color: var(--text-ghost);
+}
+
+.added {
+  background: var(--success-bg);
+}
+
+.added .marker {
+  color: var(--success-fg);
+}
+
+.removed {
+  background: var(--danger-bg);
+}
+
+.removed .marker {
+  color: var(--danger-fg);
+}
+
+.changedBefore {
+  background: var(--danger-bg);
+}
+
+.changedBefore .marker {
+  color: var(--danger-fg);
+}
+
+.changedAfter {
+  background: var(--success-bg);
+  margin-top: 1px;
+}
+
+.changedAfter .marker {
+  color: var(--success-fg);
+}
+
+.nestedBlock {
+  margin: 2px 0 2px 14px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.nestedBlockAdded {
+  background: var(--success-bg);
+}
+
+.nestedBlockRemoved {
+  background: var(--danger-bg);
+}

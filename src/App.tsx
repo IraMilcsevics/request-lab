@@ -1,5 +1,6 @@
 import styles from './App.module.css'
 import { RequestComposer } from './components/RequestComposer'
+import { ResponseDiffPanel } from './components/ResponseDiffPanel'
 import { ResponsePanel } from './components/ResponsePanel'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
@@ -8,6 +9,7 @@ import { useRequestLab } from './hooks/useRequestLab'
 function App() {
   const lab = useRequestLab()
   const activeEnvironmentName = lab.environments.find((env) => env.id === lab.activeEnvironmentId)?.name
+  const compareEntries = lab.history.filter((h) => lab.compareIds.includes(h.id))
 
   return (
     <div className={styles.app}>
@@ -47,6 +49,10 @@ function App() {
           onImportSaved={lab.importSaved}
           onClearHistory={lab.clearHistory}
           onDeleteHistoryEntry={lab.deleteHistoryEntry}
+          compareIds={lab.compareIds}
+          onToggleCompare={lab.toggleCompareSelection}
+          onClearCompare={lab.clearCompareSelection}
+          onStartCompare={lab.startCompare}
           environments={lab.environments}
           activeEnvironmentId={lab.activeEnvironmentId}
           onSelectEnvironment={lab.setActiveEnvironment}
@@ -57,29 +63,35 @@ function App() {
         />
 
         <div className={styles.main}>
-          <RequestComposer
-            method={lab.draft.method}
-            url={lab.draft.url}
-            params={lab.draft.params}
-            headers={lab.draft.headers}
-            body={lab.draft.body ?? ''}
-            timeoutMs={lab.draft.timeoutMs}
-            envVariables={lab.activeVariables}
-            activeTab={lab.reqTab}
-            onTabChange={lab.setReqTab}
-            onParamsChange={lab.setParams}
-            onHeadersChange={lab.setHeaders}
-            onBodyChange={lab.setBody}
-            onImportCurl={lab.importCurl}
-          />
+          {lab.comparing && compareEntries.length === 2 ? (
+            <ResponseDiffPanel entries={[compareEntries[0], compareEntries[1]]} onClose={lab.exitCompare} />
+          ) : (
+            <>
+              <RequestComposer
+                method={lab.draft.method}
+                url={lab.draft.url}
+                params={lab.draft.params}
+                headers={lab.draft.headers}
+                body={lab.draft.body ?? ''}
+                timeoutMs={lab.draft.timeoutMs}
+                envVariables={lab.activeVariables}
+                activeTab={lab.reqTab}
+                onTabChange={lab.setReqTab}
+                onParamsChange={lab.setParams}
+                onHeadersChange={lab.setHeaders}
+                onBodyChange={lab.setBody}
+                onImportCurl={lab.importCurl}
+              />
 
-          <ResponsePanel
-            sendState={lab.sendState}
-            result={lab.result}
-            activeTab={lab.resTab}
-            onTabChange={lab.setResTab}
-            onCancel={lab.cancel}
-          />
+              <ResponsePanel
+                sendState={lab.sendState}
+                result={lab.result}
+                activeTab={lab.resTab}
+                onTabChange={lab.setResTab}
+                onCancel={lab.cancel}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

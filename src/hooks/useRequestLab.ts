@@ -44,9 +44,12 @@ export function useRequestLab() {
   const [filter, setFilter] = useState('')
 
   // Response-diff: which history entries are picked for comparison, and
-  // whether the diff view is actively showing (vs. just having a selection).
+  // whether the user has asked to see the diff view. `comparing` itself is
+  // derived (below, once `history` exists) rather than tracked as its own
+  // state — that's what lets deleting/clearing history exit an active
+  // comparison "for free" instead of needing to remember to reset a flag.
   const [compareIds, setCompareIds] = useState<string[]>([])
-  const [comparing, setComparing] = useState(false)
+  const [comparingRequested, setComparingRequested] = useState(false)
 
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadFromStorage(HISTORY_KEY, []))
   const [saved, setSaved] = useState<SavedRequest[]>(() => loadFromStorage(SAVED_KEY, []))
@@ -68,6 +71,9 @@ export function useRequestLab() {
   useEffect(() => saveToStorage(ACTIVE_ENVIRONMENT_KEY, activeEnvironmentId), [activeEnvironmentId])
 
   const activeEnvironment = environments.find((e) => e.id === activeEnvironmentId)
+
+  const compareEntries = history.filter((h) => compareIds.includes(h.id))
+  const comparing = comparingRequested && compareEntries.length === 2
 
   // Only enabled variables with a non-blank key resolve — the same rule
   // buildRequest applies to param/header rows, via filterEnabledKeyValues.
@@ -238,15 +244,17 @@ export function useRequestLab() {
   const clearHistory = useCallback(() => {
     setHistory([])
     setSelectedHistoryId(undefined)
+    // compareIds still needs pruning (stale ids would otherwise block new
+    // picks via toggleCompareSelection's 2-max cap) — comparingRequested
+    // doesn't: compareEntries is empty once history is, so the derived
+    // `comparing` above is already false.
     setCompareIds([])
-    setComparing(false)
   }, [])
 
   const deleteHistoryEntry = useCallback((id: string) => {
     setHistory((prev) => prev.filter((entry) => entry.id !== id))
     setSelectedHistoryId((current) => (current === id ? undefined : current))
     setCompareIds((prev) => prev.filter((x) => x !== id))
-    setComparing(false) // deleting any entry ends an active comparison, to be safe
   }, [])
 
   const toggleCompareSelection = useCallback((id: string) => {
@@ -255,19 +263,24 @@ export function useRequestLab() {
       if (prev.length >= 2) return prev // a 3rd pick is ignored until one is deselected
       return [...prev, id]
     })
+    // Changing the selection always needs a fresh "Compare" click — without
+    // this, re-picking a 2nd entry after deselecting one (while the diff
+    // view happened to still be showing the old pair) would silently
+    // reopen it instead of returning to the composer.
+    setComparingRequested(false)
   }, [])
 
   const clearCompareSelection = useCallback(() => {
     setCompareIds([])
-    setComparing(false)
+    setComparingRequested(false)
   }, [])
 
   const startCompare = useCallback(() => {
-    setComparing((current) => current || compareIds.length === 2)
-  }, [compareIds])
+    setComparingRequested(true)
+  }, [])
 
   const exitCompare = useCallback(() => {
-    setComparing(false)
+    setComparingRequested(false)
   }, [])
 
   const addEnvironment = useCallback((name: string) => {
@@ -355,6 +368,7 @@ export function useRequestLab() {
     selectedHistoryId,
     compareIds,
     comparing,
+    compareEntries,
     environments,
     activeEnvironmentId,
     activeVariables,

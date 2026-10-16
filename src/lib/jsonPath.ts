@@ -1,4 +1,6 @@
-export type JsonPathResult = { ok: true; value: unknown } | { ok: false; error: string }
+import type { Result } from './result'
+
+export type JsonPathResult = Result<{ value: unknown }>
 
 const EXAMPLE_HINT = 'Enter a JSON path, e.g. "data.id" or "items[0].name".'
 

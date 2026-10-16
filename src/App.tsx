@@ -9,7 +9,6 @@ import { useRequestLab } from './hooks/useRequestLab'
 function App() {
   const lab = useRequestLab()
   const activeEnvironmentName = lab.environments.find((env) => env.id === lab.activeEnvironmentId)?.name
-  const compareEntries = lab.history.filter((h) => lab.compareIds.includes(h.id))
 
   return (
     <div className={styles.app}>
@@ -63,8 +62,8 @@ function App() {
         />
 
         <div className={styles.main}>
-          {lab.comparing && compareEntries.length === 2 ? (
-            <ResponseDiffPanel entries={[compareEntries[0], compareEntries[1]]} onClose={lab.exitCompare} />
+          {lab.comparing && lab.compareEntries.length === 2 ? (
+            <ResponseDiffPanel entries={[lab.compareEntries[0], lab.compareEntries[1]]} onClose={lab.exitCompare} />
           ) : (
             <>
               <RequestComposer

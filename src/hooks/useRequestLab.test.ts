@@ -336,6 +336,14 @@ describe('useRequestLab — response compare', () => {
     await waitFor(() => expect(result.current.history).toHaveLength(2))
   }
 
+  async function sendThrice(result: { current: ReturnType<typeof useRequestLab> }) {
+    await sendTwice(result)
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.history).toHaveLength(3))
+  }
+
   it('toggleCompareSelection adds and removes ids, capping at 2', async () => {
     const { result } = renderHook(() => useRequestLab())
     await sendTwice(result)
@@ -427,6 +435,44 @@ describe('useRequestLab — response compare', () => {
     act(() => result.current.deleteHistoryEntry(a.id))
     expect(result.current.compareIds).toEqual([b.id])
     expect(result.current.comparing).toBe(false)
+  })
+
+  it('picking a new pair after deselecting one of a confirmed pair does not silently reopen the diff view', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendThrice(result)
+    const [a, b, c] = result.current.history
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    act(() => result.current.toggleCompareSelection(b.id))
+    act(() => result.current.startCompare())
+    expect(result.current.comparing).toBe(true)
+
+    // Deselect b, then pick c as the new second entry — without ever
+    // clicking "Compare" again, this must NOT re-enter the diff view for
+    // the new a/c pair.
+    act(() => result.current.toggleCompareSelection(b.id))
+    expect(result.current.comparing).toBe(false)
+
+    act(() => result.current.toggleCompareSelection(c.id))
+    expect(result.current.compareIds).toEqual([a.id, c.id])
+    expect(result.current.comparing).toBe(false)
+
+    act(() => result.current.startCompare())
+    expect(result.current.comparing).toBe(true)
+  })
+
+  it('exposes compareEntries as the history entries matching compareIds', async () => {
+    const { result } = renderHook(() => useRequestLab())
+    await sendTwice(result)
+    const [a, b] = result.current.history
+
+    expect(result.current.compareEntries).toEqual([])
+
+    act(() => result.current.toggleCompareSelection(a.id))
+    expect(result.current.compareEntries).toEqual([a])
+
+    act(() => result.current.toggleCompareSelection(b.id))
+    expect(result.current.compareEntries).toEqual([a, b])
   })
 })
 

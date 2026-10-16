@@ -1,5 +1,6 @@
 import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import type { Collection, SavedRequest } from '../types/ui'
+import type { Result } from './result'
 
 const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -17,7 +18,7 @@ export function serializeCollections(collections: Collection[], saved: SavedRequ
   return JSON.stringify(data, null, 2)
 }
 
-export type ParseResult = { ok: true; collections: Collection[]; saved: SavedRequest[] } | { ok: false; error: string }
+export type ParseResult = Result<{ collections: Collection[]; saved: SavedRequest[] }>
 
 function isCollection(value: unknown): value is Collection {
   return (

@@ -1,11 +1,12 @@
 import { base64EncodeUtf8 } from '../lib/base64'
+import type { Result } from '../lib/result'
 import type { HttpMethod, KeyValue, RequestDraft } from './types'
 
 const SUPPORTED_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 const DEFAULT_TIMEOUT_MS = 8000
 
-export type ParseCurlResult = { ok: true; draft: RequestDraft } | { ok: false; error: string }
+export type ParseCurlResult = Result<{ draft: RequestDraft }>
 
 /**
  * Shell-style tokenizer: splits on whitespace, but a quoted span ('...' or

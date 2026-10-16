@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { ApiResult } from '../api-client'
 import { formatBytes, utf8ByteLength } from '../lib/bytes'
 import { errorHint, errorTitle, toneColors, toneForErrorKind, toneForStatus } from '../lib/status'
@@ -29,15 +29,17 @@ export function ResponsePanel({ sendState, result, activeTab, onTabChange, onCan
   const [chainName, setChainName] = useState('')
   const [chainError, setChainError] = useState<string | undefined>(undefined)
   const [chainSaved, setChainSaved] = useState(false)
+  const [lastResult, setLastResult] = useState(result)
 
-  // Each new response starts back in Formatted view, even if the previous
-  // one was left showing Raw.
-  useEffect(() => {
+  // Each new response starts back in Formatted view, with the "save as
+  // variable" panel closed, even if the previous one was left mid-edit.
+  if (result !== lastResult) {
+    setLastResult(result)
     setBodyView('formatted')
     setChainPanelOpen(false)
     setChainError(undefined)
     setChainSaved(false)
-  }, [result])
+  }
 
   function handleExtractVariable() {
     const outcome = onExtractVariable(chainPath, chainName)

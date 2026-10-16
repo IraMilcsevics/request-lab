@@ -83,6 +83,12 @@
   gap: 12px;
 }
 
+@media (max-width: 480px) {
+  .chainRow {
+    flex-direction: column;
+  }
+}
+
 .chainLabel {
   flex: 1 1 0;
   display: flex;

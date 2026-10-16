@@ -166,3 +166,71 @@ describe('RequestComposer — Import cURL', () => {
     expect(screen.queryByLabelText('Paste a curl command')).not.toBeInTheDocument()
   })
 })
+
+describe('RequestComposer — Auth tab', () => {
+  it('defaults to "No Auth" with no Authorization header', () => {
+    renderComposer({ activeTab: 'auth', headers: [] })
+    expect(screen.getByRole('radio', { name: 'No Auth' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByText("This request won't include an Authorization header.")).toBeInTheDocument()
+  })
+
+  it('selecting Bearer Token adds an Authorization header, then typing updates it', async () => {
+    const user = userEvent.setup()
+    const onHeadersChange = vi.fn()
+    renderComposer({ activeTab: 'auth', headers: [], onHeadersChange })
+
+    await user.click(screen.getByRole('radio', { name: 'Bearer Token' }))
+    expect(onHeadersChange).toHaveBeenLastCalledWith([{ key: 'Authorization', value: 'Bearer ', enabled: true }])
+  })
+
+  it('shows the Bearer token field when a header is already set', () => {
+    renderComposer({ activeTab: 'auth', headers: [{ key: 'Authorization', value: 'Bearer abc123', enabled: true }] })
+    expect(screen.getByRole('radio', { name: 'Bearer Token' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByLabelText('Bearer token')).toHaveValue('abc123')
+  })
+
+  it('typing a token updates the Authorization header value', async () => {
+    const user = userEvent.setup()
+    const onHeadersChange = vi.fn()
+    renderComposer({
+      activeTab: 'auth',
+      headers: [{ key: 'Authorization', value: 'Bearer a', enabled: true }],
+      onHeadersChange,
+    })
+
+    await user.type(screen.getByLabelText('Bearer token'), 'b')
+    expect(onHeadersChange).toHaveBeenCalledWith([{ key: 'Authorization', value: 'Bearer ab', enabled: true }])
+  })
+
+  it('shows Basic auth fields pre-filled from an existing header', () => {
+    renderComposer({
+      activeTab: 'auth',
+      headers: [{ key: 'Authorization', value: `Basic ${btoa('ada:secret')}`, enabled: true }],
+    })
+    expect(screen.getByLabelText('Basic auth username')).toHaveValue('ada')
+    expect(screen.getByLabelText('Basic auth password')).toHaveValue('secret')
+  })
+
+  it('switching to No Auth removes the Authorization header', async () => {
+    const user = userEvent.setup()
+    const onHeadersChange = vi.fn()
+    renderComposer({
+      activeTab: 'auth',
+      headers: [
+        { key: 'Authorization', value: 'Bearer abc', enabled: true },
+        { key: 'Accept', value: 'application/json', enabled: true },
+      ],
+      onHeadersChange,
+    })
+
+    await user.click(screen.getByRole('radio', { name: 'No Auth' }))
+    expect(onHeadersChange).toHaveBeenCalledWith([{ key: 'Accept', value: 'application/json', enabled: true }])
+  })
+
+  it('does not show the Authorization header in the plain Headers tab fields by accident on other tabs', () => {
+    renderComposer({ activeTab: 'headers', headers: [{ key: 'Authorization', value: 'Bearer abc', enabled: true }] })
+    // It's just an ordinary editable row there, not hidden or special-cased.
+    expect(screen.getByDisplayValue('Authorization')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Bearer abc')).toBeInTheDocument()
+  })
+})

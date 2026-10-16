@@ -26,7 +26,7 @@ export interface Environment {
   variables: KeyValue[]
 }
 
-export type RequestTab = 'params' | 'headers' | 'body'
+export type RequestTab = 'params' | 'auth' | 'headers' | 'body'
 export type ResponseTab = 'body' | 'headers'
 export type SidebarTab = 'history' | 'saved' | 'env'
 export type SendState = 'idle' | 'loading' | 'done'

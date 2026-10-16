@@ -526,3 +526,46 @@ describe('useRequestLab — collections', () => {
     expect(result.current.saved).toHaveLength(1)
   })
 })
+
+describe('useRequestLab — importCurl', () => {
+  it('loads a parsed curl command into the draft, resetting result/sendState/selection', async () => {
+    server.use(http.get(DEMO_URL, () => HttpResponse.json({ id: 1 })))
+    const { result } = renderHook(() => useRequestLab())
+
+    act(() => {
+      void result.current.send()
+    })
+    await waitFor(() => expect(result.current.sendState).toBe('done'))
+    expect(result.current.selectedHistoryId).toBeDefined()
+
+    act(() => {
+      const outcome = result.current.importCurl(
+        `curl -X POST -H 'Content-Type: application/json' -d '{"a":1}' 'https://api.example.com/things'`,
+      )
+      expect(outcome).toEqual({ ok: true })
+    })
+
+    expect(result.current.draft).toMatchObject({
+      method: 'POST',
+      url: 'https://api.example.com/things',
+      body: '{"a":1}',
+    })
+    expect(result.current.draft.headers).toEqual([{ key: 'Content-Type', value: 'application/json', enabled: true }])
+    expect(result.current.sendState).toBe('idle')
+    expect(result.current.result).toBeUndefined()
+    expect(result.current.selectedHistoryId).toBeUndefined()
+  })
+
+  it('reports a parse error and leaves the current draft untouched', () => {
+    const { result } = renderHook(() => useRequestLab())
+    const originalUrl = result.current.draft.url
+
+    let outcome: { ok: true } | { ok: false; error: string } = { ok: true }
+    act(() => {
+      outcome = result.current.importCurl('curl -X POST')
+    })
+
+    expect(outcome).toEqual({ ok: false, error: 'No URL found in the curl command.' })
+    expect(result.current.draft.url).toBe(originalUrl)
+  })
+})

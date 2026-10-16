@@ -18,6 +18,7 @@ function renderComposer(overrides: Partial<ComponentProps<typeof RequestComposer
     onParamsChange: vi.fn(),
     onHeadersChange: vi.fn(),
     onBodyChange: vi.fn(),
+    onImportCurl: vi.fn(() => ({ ok: true as const })),
     ...overrides,
   }
   render(<RequestComposer {...props} />)
@@ -118,5 +119,50 @@ describe('RequestComposer body tab', () => {
   it('treats PATCH like POST/PUT — no "skips a body" note', () => {
     renderComposer({ activeTab: 'body', method: 'PATCH' })
     expect(screen.queryByText(/usually don't send a body/)).not.toBeInTheDocument()
+  })
+})
+
+describe('RequestComposer — Import cURL', () => {
+  it('shows no panel until the button is clicked', () => {
+    renderComposer()
+    expect(screen.queryByLabelText('Paste a curl command')).not.toBeInTheDocument()
+  })
+
+  it('opens the panel, imports on click, and closes on success', async () => {
+    const user = userEvent.setup()
+    const onImportCurl = vi.fn(() => ({ ok: true as const }))
+    renderComposer({ onImportCurl })
+
+    await user.click(screen.getByRole('button', { name: 'Import cURL' }))
+    const textarea = screen.getByLabelText('Paste a curl command')
+    await user.type(textarea, "curl 'https://api.example.com/things'")
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+
+    expect(onImportCurl).toHaveBeenCalledWith("curl 'https://api.example.com/things'")
+    expect(screen.queryByLabelText('Paste a curl command')).not.toBeInTheDocument()
+  })
+
+  it('shows the error and keeps the panel open on a failed import', async () => {
+    const user = userEvent.setup()
+    const onImportCurl = vi.fn(() => ({ ok: false as const, error: 'No URL found in the curl command.' }))
+    renderComposer({ onImportCurl })
+
+    await user.click(screen.getByRole('button', { name: 'Import cURL' }))
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+
+    expect(screen.getByText('No URL found in the curl command.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Paste a curl command')).toBeInTheDocument()
+  })
+
+  it('closes without importing on Cancel', async () => {
+    const user = userEvent.setup()
+    const onImportCurl = vi.fn()
+    renderComposer({ onImportCurl })
+
+    await user.click(screen.getByRole('button', { name: 'Import cURL' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onImportCurl).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Paste a curl command')).not.toBeInTheDocument()
   })
 })

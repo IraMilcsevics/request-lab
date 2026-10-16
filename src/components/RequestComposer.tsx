@@ -3,7 +3,7 @@ import { applyEnvironmentVariables, buildRequest, toCurl } from '../api-client'
 import type { HttpMethod, KeyValue, RequestDraft } from '../api-client'
 import { isValidJson } from '../lib/json'
 import type { RequestTab } from '../types/ui'
-import { CopyIcon } from './icons'
+import { CopyIcon, InboxIcon } from './icons'
 import { JsonEditor } from './JsonEditor'
 import { KeyValueTable } from './KeyValueTable'
 import styles from './RequestComposer.module.css'
@@ -29,6 +29,7 @@ interface RequestComposerProps {
   onParamsChange: (rows: KeyValue[]) => void
   onHeadersChange: (rows: KeyValue[]) => void
   onBodyChange: (body: string) => void
+  onImportCurl: (text: string) => { ok: true } | { ok: false; error: string }
 }
 
 export function RequestComposer({
@@ -44,8 +45,12 @@ export function RequestComposer({
   onParamsChange,
   onHeadersChange,
   onBodyChange,
+  onImportCurl,
 }: RequestComposerProps) {
   const [copied, setCopied] = useState(false)
+  const [curlPanelOpen, setCurlPanelOpen] = useState(false)
+  const [curlText, setCurlText] = useState('')
+  const [curlError, setCurlError] = useState<string | undefined>(undefined)
   const bodyIsInvalid = activeTab === 'body' && !isValidJson(body)
 
   const rawDraft: RequestDraft = { method, url, params, headers, body, timeoutMs }
@@ -69,6 +74,17 @@ export function RequestComposer({
     }
   }
 
+  function handleImportCurl() {
+    const result = onImportCurl(curlText)
+    if (result.ok) {
+      setCurlText('')
+      setCurlError(undefined)
+      setCurlPanelOpen(false)
+    } else {
+      setCurlError(result.error)
+    }
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.tabBar} role="tablist" aria-label="Request editor">
@@ -84,18 +100,53 @@ export function RequestComposer({
             {tab.label}
           </button>
         ))}
-        <button
-          type="button"
-          className={styles.curlButton}
-          onClick={copyAsCurl}
-          disabled={!built.ok}
-          aria-label="Copy as cURL"
-          title={built.ok ? undefined : 'Fix the URL in the top bar to copy this request as cURL.'}
-        >
-          <CopyIcon size={12} />
-          <span className={styles.curlButtonLabel}>{copied ? 'Copied' : 'Copy as cURL'}</span>
-        </button>
+        <div className={styles.curlButtonGroup}>
+          <button
+            type="button"
+            className={styles.curlButton}
+            onClick={copyAsCurl}
+            disabled={!built.ok}
+            aria-label="Copy as cURL"
+            title={built.ok ? undefined : 'Fix the URL in the top bar to copy this request as cURL.'}
+          >
+            <CopyIcon size={12} />
+            <span className={styles.curlButtonLabel}>{copied ? 'Copied' : 'Copy as cURL'}</span>
+          </button>
+          <button
+            type="button"
+            className={styles.curlButton}
+            onClick={() => {
+              setCurlPanelOpen((open) => !open)
+              setCurlError(undefined)
+            }}
+          >
+            <InboxIcon size={12} />
+            <span className={styles.curlButtonLabel}>Import cURL</span>
+          </button>
+        </div>
       </div>
+
+      {curlPanelOpen && (
+        <div className={styles.curlPanel}>
+          <textarea
+            className={styles.curlTextarea}
+            value={curlText}
+            onChange={(e) => setCurlText(e.target.value)}
+            placeholder={`curl -X POST -H 'Content-Type: application/json' -d '{"key":"value"}' 'https://api.example.com/things'`}
+            aria-label="Paste a curl command"
+            spellCheck={false}
+          />
+          {curlError && <div className={styles.bodyError}>{curlError}</div>}
+          <div className={styles.curlPanelActions}>
+            <button type="button" className={styles.curlCancel} onClick={() => setCurlPanelOpen(false)}>
+              Cancel
+            </button>
+            <button type="button" className={styles.curlConfirm} onClick={handleImportCurl}>
+              Import
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'params' && (
         <>

@@ -30,11 +30,17 @@
   border-bottom-color: var(--accent);
 }
 
+.curlButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .curlButton {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: auto;
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: 6px;
@@ -84,4 +90,51 @@
   margin-top: 8px;
   font-size: 12px;
   color: var(--danger-fg);
+}
+
+.curlPanel {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.curlTextarea {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  resize: vertical;
+}
+
+.curlPanelActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.curlConfirm {
+  border: none;
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+}
+
+.curlCancel {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
 }

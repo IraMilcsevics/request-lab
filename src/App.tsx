@@ -70,6 +70,7 @@ function App() {
             onParamsChange={lab.setParams}
             onHeadersChange={lab.setHeaders}
             onBodyChange={lab.setBody}
+            onImportCurl={lab.importCurl}
           />
 
           <ResponsePanel

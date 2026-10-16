@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { applyEnvironmentVariables, sendRequest } from '../api-client'
+import { applyEnvironmentVariables, parseCurl, sendRequest } from '../api-client'
 import type { ApiResult, KeyValue, RequestDraft } from '../api-client'
 import { parseCollectionsImport, serializeCollections } from '../lib/collections'
 import { createId } from '../lib/id'
@@ -98,6 +98,17 @@ export function useRequestLab() {
     setResult(undefined)
     setSendState('idle')
   }, [])
+
+  const importCurl = useCallback(
+    (text: string): { ok: true } | { ok: false; error: string } => {
+      const result = parseCurl(text)
+      if (!result.ok) return result
+      loadDraft(result.draft)
+      setSelectedHistoryId(undefined)
+      return { ok: true }
+    },
+    [loadDraft],
+  )
 
   const send = useCallback(async () => {
     abortRef.current?.abort()
@@ -282,6 +293,7 @@ export function useRequestLab() {
     cancel,
     loadFromHistory,
     loadSaved,
+    importCurl,
     saveCurrent,
     deleteSaved,
     duplicateSaved,

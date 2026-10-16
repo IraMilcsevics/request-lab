@@ -60,8 +60,25 @@ export function diffJson(before: unknown, after: unknown): DiffNode {
   return { kind: 'leaf', status: equal ? 'unchanged' : 'changed', before, after }
 }
 
+// A DiffNode tree, once built, is never mutated — DiffViewer calls
+// countDifferences on the same branch objects over and over (once per
+// render, at every nesting level, since a parent's count recurses through
+// its children's subtrees too). Caching by node identity turns what would
+// be repeated O(subtree size) walks into one walk per node, ever.
+const countCache = new WeakMap<DiffNode, number>()
+
 /** Counts how many leaves differ (added + removed + changed), for a quick "N differences" summary. */
 export function countDifferences(node: DiffNode): number {
-  if (node.kind === 'leaf') return node.status === 'unchanged' ? 0 : 1
-  return node.entries.reduce((sum, e) => sum + countDifferences(e.node), 0)
+  const cached = countCache.get(node)
+  if (cached !== undefined) return cached
+
+  const count =
+    node.kind === 'leaf'
+      ? node.status === 'unchanged'
+        ? 0
+        : 1
+      : node.entries.reduce((sum, e) => sum + countDifferences(e.node), 0)
+
+  countCache.set(node, count)
+  return count
 }
